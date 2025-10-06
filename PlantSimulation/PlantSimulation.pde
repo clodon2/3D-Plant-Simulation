@@ -6,6 +6,9 @@ no need to import other files here, in compiling they all get thrown together au
 
 void setup() {
   size (200, 200, P3D);
+  PlantPopulation test_pop = new PlantPopulation();
+  test_pop.initPopulation(100, 5);
+  test_pop.printPopulation();
 }
 
 void draw() {
