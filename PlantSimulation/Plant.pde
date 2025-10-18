@@ -67,6 +67,34 @@ public class IntGene implements Gene {
 }
 
 
+public class FloatGene implements Gene {
+  private float value;
+  
+  public FloatGene(float value) {
+    this.value = value;
+  }
+  
+  @Override
+  public void mutate() {
+    this.value = this.value + random(this.value * -.2, this.value * .2);
+  }
+  
+  @Override
+  public Gene copy() {
+    return new FloatGene(this.value);
+  }
+  
+  public float getValue() {
+    return this.value;
+  }
+  
+  @Override
+  public String toString() {
+    return Float.toString(value);
+  }
+}
+
+
 public class Chromosome {
   private List<Gene> genes;
   
@@ -140,6 +168,7 @@ public class Genotype {
 public class Plant {
   public Genotype genotype;
   private float energy = 100;
+  private PVector position = new PVector(0, 0, 0);
   
   Plant(Genotype genotype) {
     this.genotype = genotype;
@@ -178,6 +207,12 @@ public class PlantPopulation {
     }
   }
   
+  public void stepPopulation() {
+    this.reproducePopulation();
+    this.updatePopulation();
+    this.cullPopulation();
+  }
+  
   public void reproducePopulation() {
     List<Plant> new_plants = new ArrayList<>();
     List<Plant> healthy_plants = new ArrayList<>();
@@ -191,6 +226,9 @@ public class PlantPopulation {
       new_plants.add(new Plant(newGenome));
     }
     this.plants.addAll(new_plants);
+  }
+  
+  public void updatePopulation() {
   }
   
   public void cullPopulation() {
