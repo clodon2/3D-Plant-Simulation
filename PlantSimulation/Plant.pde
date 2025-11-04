@@ -215,6 +215,17 @@ public class Plant {
   public void updateEnergy(float change) {
     this.energy += change;
   }
+  
+  public void generateBody() {
+    ArrayList<PVector> plantBase = new ArrayList<>();
+    plantBase.add(this.body.position);
+    plantBase.add(new PVector(this.body.position.x, this.body.position.y + 10, this.body.position.z));
+    this.body.addBranchToBody(plantBase);
+  }
+  
+  public void draw() {
+    this.body.draw();
+  }
 }
 
 
@@ -231,12 +242,40 @@ public class PlantBody {
     this.leaves = leaves;
   }
   
+  public void addBranchToBody(ArrayList<PVector> branch) {
+    this.body.add(branch);
+  }
+  
+  public void addPointToBranch(PVector point, int index) {
+    this.body.get(index).add(point);
+  }
+  
+  public void addLeafToBody(ArrayList<PVector> leaf) {
+    this.leaves.add(leaf);
+  }
+  
+  public void addPointToLeaf(PVector point, int index) {
+    this.leaves.get(index).add(point);
+  }
+  
   public ArrayList<ArrayList<PVector>> getBody() {
     return this.body;
   }
   
   public ArrayList<ArrayList<PVector>> getLeaves() {
     return this.leaves;
+  }
+  
+  public void draw() {
+    stroke(0);
+    noFill();
+    for (ArrayList<PVector> branch: this.body) {
+      beginShape();
+      for (PVector point: branch) {
+        vertex(point.x, point.y, point.z);
+      }
+      endShape();
+    }
   }
 }
 
