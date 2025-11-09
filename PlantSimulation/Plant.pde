@@ -1,118 +1,6 @@
 /*
 Code for plants here, for rendering them create a function in RenderPlantWorld
 */
-import java.util.ArrayList;
-import java.util.List;
-
-
-// baisc interface for a Gene, any gene calss will have these methods
-public interface Gene {
-  void mutate();
-  Gene copy();
-}
-
-
-// gene where the value is a boolean, can be used for basic attributes
-public class BoolGene implements Gene {
-  private boolean value;
-  
-  // construct instance of class with value
-  public BoolGene(boolean value) {
-    this.value = value;
-  }
-  
-  // override from interface, mutate gene by flipping
-  @Override
-  public void mutate() {
-    this.value = !this.value;
-  }
-  
-  // override from interface, create a copy of the gene
-  @Override
-  public Gene copy() {
-    return new BoolGene(this.value);
-  }
-  
-  // get the value in the gene
-  public boolean getValue() {
-    return this.value;
-  }
-  
-  // override from class, used for printing
-  @Override
-  public String toString() {
-    return Boolean.toString(value);
-  }
-}
-
-
-// gene where the value is an integer
-public class IntGene implements Gene {
-  private int value;
-  
-  // construct gene with value
-  public IntGene(int value) {
-    this.value = value;
-  }
-  
-  // override from interface, mutate by subtracting or adding a random value within 20 percent of value
-  @Override
-  public void mutate() {
-    this.value = this.value + int(random(this.value * -.2, this.value * .2));
-  }
-  
-  // override from interface, create a copy of the gene
-  @Override
-  public Gene copy() {
-    return new IntGene(this.value);
-  }
-  
-  // get value of gene
-  public int getValue() {
-    return this.value;
-  }
-  
-  // override from class, used for printing
-  @Override
-  public String toString() {
-    return Integer.toString(value);
-  }
-}
-
-
-// gene where value is a float
-public class FloatGene implements Gene {
-  private float value;
-  
-  // construct instance of float gene with value
-  public FloatGene(float value) {
-    this.value = value;
-  }
-  
-  // override from interface, mutate by adding or subtracting a value within 20 percent of value
-  @Override
-  public void mutate() {
-    this.value = this.value + random(this.value * -.2, this.value * .2);
-  }
-  
-  // override from interface, copy gene
-  @Override
-  public Gene copy() {
-    return new FloatGene(this.value);
-  }
-  
-  // get value from gene
-  public float getValue() {
-    return this.value;
-  }
-  
-  // override from class, used for printing
-  @Override
-  public String toString() {
-    return Float.toString(value);
-  }
-}
-
 
 // chromosome, collection of genes representing a trait
 public class Chromosome {
@@ -121,6 +9,10 @@ public class Chromosome {
   // construct instance of chromosome with list of genes
   public Chromosome(List<Gene> genes) {
     this.genes = genes;
+  }
+  
+  public Gene getGene(int index) {
+    return this.genes.get(index);
   }
   
   // mutate all genes in chromosome
@@ -168,6 +60,10 @@ public class Genotype {
     this.chromosomes = new ArrayList<>();
   }
   
+  public Chromosome getChromosome(int index) {
+    return this.chromosomes.get(index);
+  }
+  
   // add chromsome to genotype
   public void addChromosome(Chromosome chromosome) {
     this.chromosomes.add(chromosome);
@@ -204,6 +100,17 @@ public class Plant {
   // construct plant with a genotype
   Plant(Genotype genotype) {
     this.genotype = genotype;
+    this.body = new PlantBody(new PVector(0, 0, 0));
+    this.body.addBranchToBody(new ArrayList<PVector>());
+    this.body.addPointToBranch(new PVector(0, 0, 0), 0);
+  }
+  
+  // construct plant with a genotype and body
+  Plant(Genotype genotype, PVector position) {
+    this.genotype = genotype;
+    this.body = new PlantBody(position);
+    this.body.addBranchToBody(new ArrayList<PVector>());
+    this.body.addPointToBranch(position, 0);
   }
   
   // get the energy of this plant
@@ -223,6 +130,21 @@ public class Plant {
     this.body.addBranchToBody(plantBase);
   }
   
+  public void update() {
+    Chromosome growth_chromosome = this.genotype.getChromosome(0);
+    Gene<Float> max_size_gene = growth_chromosome.getGene(1);
+    Gene<Float> growth_rate_gene = growth_chromosome.getGene(0);
+    if (max_size_gene.getValue() < this.body.getSize()) {
+      return;
+    }
+    ArrayList<ArrayList<PVector>> plant_branches = this.body.getBody();
+    for (int i=0; i<plant_branches.size(); i++) {
+      PVector last_point = plant_branches.get(i).get(plant_branches.get(i).size() - 1);
+      this.body.addPointToBranch(new PVector(last_point.x, last_point.y - growth_rate_gene.getValue(), last_point.z), i);
+      this.body.updateSize(growth_rate_gene.getValue());
+    }
+  }
+  
   public void draw() {
     this.body.draw();
   }
@@ -232,10 +154,17 @@ public class Plant {
 // visual part of a plant, used for rendering in the world
 public class PlantBody {
   private PVector position = new PVector(0, 0, 0);
+  private float total_size = 0.0;
   // structured such that each list in body represents a collection of points forming a line, so we store branches and the main trunk or stem in separate lists in body
   private ArrayList<ArrayList<PVector>> body;
   // structured such that each list in leaves represents a collection of points forming a shape for a leaf
   private ArrayList<ArrayList<PVector>> leaves;
+  
+  PlantBody(PVector position) {
+    this.position = position;
+    this.body = new ArrayList<ArrayList<PVector>>();
+    this.leaves = new ArrayList<ArrayList<PVector>>();
+  }
   
   PlantBody(ArrayList<ArrayList<PVector>> body, ArrayList<ArrayList<PVector>>leaves) {
     this.body = body;
@@ -266,15 +195,23 @@ public class PlantBody {
     return this.leaves;
   }
   
+  public Float getSize() {
+    return this.total_size;
+  }
+  
+  public Float updateSize(float amount) {
+    this.total_size += amount;
+    return this.total_size;
+  }
+  
   public void draw() {
-    stroke(0);
-    noFill();
-    for (ArrayList<PVector> branch: this.body) {
-      beginShape();
-      for (PVector point: branch) {
-        vertex(point.x, point.y, point.z);
+    fill(100, 255, 100);
+    noStroke();
+  
+    for (ArrayList<PVector> branch : this.body) {
+      for (int i = 0; i < branch.size() - 1; i++) {
+        drawCylinder(branch.get(i), branch.get(i + 1), 1.5, 16);
       }
-      endShape();
     }
   }
 }
@@ -283,10 +220,12 @@ public class PlantBody {
 // holds the entire population of plants
 public class PlantPopulation {
   private List<Plant> plants;
+  private World world;
   
   // construct new empty population
-  PlantPopulation() {
+  PlantPopulation(World world) {
     this.plants = new ArrayList<>();
+    this.world = world;
   }
   
   // create an initial population of size and number of chromosomes for each plant
@@ -296,13 +235,16 @@ public class PlantPopulation {
       
       // generate a random chromosome
       List<Gene> randGenes = new ArrayList<>();
-      for (int j=0; j<chromosome_size; j++) {
-        randGenes.add(new BoolGene(randomBool()));
-      }
+      // growth rate
+      randGenes.add(new FloatGene(random(.5, 1)));
+      // max growth length
+      randGenes.add(new FloatGene(random(10, 30)));
+      // rotation gene (useless now)
+      randGenes.add(new Rotation3DGene(new PVector(random(0, PI), random(0, PI), random(0, PI))));
       
       // add chromosome to genotype and create new plant with genotype
       newGenotype.addChromosome(new Chromosome(randGenes));
-      this.plants.add(new Plant(newGenotype));
+      this.plants.add(new Plant(newGenotype, this.world.getRandomPointOnGround()));
     }
   }
   
@@ -324,13 +266,16 @@ public class PlantPopulation {
     }
     for (int i=0; i<(healthy_plants.size() - 1); i++) {
       Genotype newGenome = healthy_plants.get(i).genotype.reproduce(healthy_plants.get(i+1).genotype);
-      new_plants.add(new Plant(newGenome));
+      new_plants.add(new Plant(newGenome, this.world.getRandomPointOnGround()));
     }
     this.plants.addAll(new_plants);
   }
   
   // update population (growing and stuff)
   public void updatePopulation() {
+    for (int i=0; i<(this.plants.size()); i++) {
+      this.plants.get(i).update();
+    }
   }
   
   // kill plants below a certain energy level
@@ -348,6 +293,12 @@ public class PlantPopulation {
   public void printPopulation() {
     for (int i=0; i<this.plants.size(); i++) {
       println(str(i) + this.plants.get(i).genotype);
+    }
+  }
+  
+  public void draw() {
+    for (int i=0; i<this.plants.size(); i++) {
+      this.plants.get(i).draw();
     }
   }
 }
