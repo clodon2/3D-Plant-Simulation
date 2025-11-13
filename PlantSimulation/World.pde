@@ -79,7 +79,7 @@ public class World {
   PVector getRandomPointOnGround() {
     float vertex_size = 20;
     float noiseScale = 0.05;
-    float heightScale = 30;
+    float heightScale = 50;
   
     float halfX = world_max_size.x / 2;
     float halfZ = world_max_size.z / 2;

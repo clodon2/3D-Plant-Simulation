@@ -61,3 +61,7 @@ void drawCylinder(PVector start, PVector end, float radius, int detail) {
 
   popMatrix();
 }
+
+PVector componentMultiply(PVector a, PVector b) {
+  return new PVector(a.x * b.x, a.y * b.y, a.z * b.z);
+}

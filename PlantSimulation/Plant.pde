@@ -97,6 +97,8 @@ public class Plant {
   private float energy = 100;
   private PlantBody body;
   
+  private float leaf_growth_frequency_tracker = 0;
+  
   // construct plant with a genotype
   Plant(Genotype genotype) {
     this.genotype = genotype;
@@ -137,16 +139,47 @@ public class Plant {
     if (max_size_gene.getValue() < this.body.getSize()) {
       return;
     }
+    // leaf gene references
+    Chromosome leaf_chromosome = this.genotype.getChromosome(1);
+    Gene<Float> leaf_width_gene = leaf_chromosome.getGene(0);
+    Gene<Float> leaf_length_gene = leaf_chromosome.getGene(1);
+    Gene<Float> leaf_growth_frequency_gene = leaf_chromosome.getGene(2);
+    
     ArrayList<ArrayList<PVector>> plant_branches = this.body.getBody();
+    // grow all branches by growth amount
     for (int i=0; i<plant_branches.size(); i++) {
       PVector last_point = plant_branches.get(i).get(plant_branches.get(i).size() - 1);
       this.body.addPointToBranch(new PVector(last_point.x, last_point.y - growth_rate_gene.getValue(), last_point.z), i);
       this.body.updateSize(growth_rate_gene.getValue());
+      // grow new leaf
+      print(this.leaf_growth_frequency_tracker / max_size_gene.getValue());
+      print("\n");
+      if (leaf_growth_frequency_gene.getValue() <= (this.leaf_growth_frequency_tracker / max_size_gene.getValue())) {
+        ArrayList<PVector> new_leaf = this.generateLeaf(last_point, new PVector(), leaf_width_gene.getValue(), leaf_length_gene.getValue());
+        this.body.addLeafToBody(new_leaf);
+        this.leaf_growth_frequency_tracker = 0;
+      }
+      this.leaf_growth_frequency_tracker += growth_rate_gene.getValue();
     }
   }
   
   public void draw() {
     this.body.draw();
+  }
+  
+  private ArrayList<PVector> generateLeaf(PVector source_point, PVector growth_direction, float leaf_width, float leaf_length) {
+    ArrayList<PVector> new_leaf = new ArrayList<PVector>();
+    new_leaf.add(source_point);
+    PVector left_base = new PVector(-leaf_width/2, .1, leaf_length/2);
+    PVector right_base = new PVector(leaf_width/2, .1, leaf_length/2);
+    PVector tip_base = new PVector(0, .1, leaf_length);
+    PVector left_point = source_point.copy().add(componentMultiply(left_base, growth_direction));
+    PVector right_point = source_point.copy().add(componentMultiply(right_base, growth_direction));
+    PVector tip_point = source_point.copy().add(componentMultiply(tip_base, growth_direction));
+    new_leaf.add(left_point);
+    new_leaf.add(right_point);
+    new_leaf.add(tip_point);
+    return new_leaf;
   }
 }
 
@@ -210,8 +243,25 @@ public class PlantBody {
   
     for (ArrayList<PVector> branch : this.body) {
       for (int i = 0; i < branch.size() - 1; i++) {
-        drawCylinder(branch.get(i), branch.get(i + 1), 1.5, 16);
+        drawCylinder(branch.get(i), branch.get(i + 1), 1.5, 4);
       }
+    }
+    
+    for (ArrayList<PVector> leaf : this.leaves) {
+          PVector source = leaf.get(0);
+          PVector left = leaf.get(1);
+          PVector right = leaf.get(2);
+          PVector tip = leaf.get(3);
+      
+          // Draw as a simple triangle fan
+          fill(0, 255, 0, 150); // green with some transparency
+          noStroke();
+          beginShape();
+          vertex(source.x, source.y, source.z);
+          vertex(left.x, left.y, left.z);
+          vertex(tip.x, tip.y, tip.z);
+          vertex(right.x, right.y, right.z);
+          endShape(CLOSE);
     }
   }
 }
@@ -233,17 +283,34 @@ public class PlantPopulation {
     for (int i=0; i<population_size; i++) {
       Genotype newGenotype = new Genotype();
       
-      // generate a random chromosome
-      List<Gene> randGenes = new ArrayList<>();
+      // generate a random chromosome for growth info
+      List<Gene> growthGenes = new ArrayList<>();
       // growth rate
-      randGenes.add(new FloatGene(random(.5, 1)));
+      growthGenes.add(new FloatGene(random(.5, 1)));
       // max growth length
-      randGenes.add(new FloatGene(random(10, 30)));
+      growthGenes.add(new FloatGene(random(10, 30)));
       // rotation gene (useless now)
-      randGenes.add(new Rotation3DGene(new PVector(random(0, PI), random(0, PI), random(0, PI))));
+      growthGenes.add(new Rotation3DGene(new PVector(random(0, PI), random(0, PI), random(0, PI))));
+      
+      List<Gene> leafGenes = new ArrayList<>();
+      // leaf width
+      leafGenes.add(new FloatGene(random(8, 15)));
+      // leaf length
+      leafGenes.add(new FloatGene(random(12, 26)));
+      // leaf frequency (1 per growth percentage)
+      leafGenes.add(new FloatGene(random(.1, 1)));
+      // leaf branch modifier (branches have more or less leaves)
+      leafGenes.add(new FloatGene(random(0, 5)));
+      
+      List<Gene> branchGenes = new ArrayList<>();
+      // branch amount
+      branchGenes.add(new IntGene(int(random(0, 10))));
+      
       
       // add chromosome to genotype and create new plant with genotype
-      newGenotype.addChromosome(new Chromosome(randGenes));
+      newGenotype.addChromosome(new Chromosome(growthGenes));
+      newGenotype.addChromosome(new Chromosome(leafGenes));
+      newGenotype.addChromosome(new Chromosome(branchGenes));
       this.plants.add(new Plant(newGenotype, this.world.getRandomPointOnGround()));
     }
   }
