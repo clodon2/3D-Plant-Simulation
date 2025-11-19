@@ -144,18 +144,19 @@ public class Plant {
     Gene<Float> leaf_width_gene = leaf_chromosome.getGene(0);
     Gene<Float> leaf_length_gene = leaf_chromosome.getGene(1);
     Gene<Float> leaf_growth_frequency_gene = leaf_chromosome.getGene(2);
+    Gene<Float> leaf_rotation_bias_gene = leaf_chromosome.getGene(4);
     
     ArrayList<ArrayList<PVector>> plant_branches = this.body.getBody();
     // grow all branches by growth amount
     for (int i=0; i<plant_branches.size(); i++) {
+      PVector growth_direction = new PVector(0, 1, 0);
       PVector last_point = plant_branches.get(i).get(plant_branches.get(i).size() - 1);
       this.body.addPointToBranch(new PVector(last_point.x, last_point.y - growth_rate_gene.getValue(), last_point.z), i);
       this.body.updateSize(growth_rate_gene.getValue());
       // grow new leaf
-      print(this.leaf_growth_frequency_tracker / max_size_gene.getValue());
-      print("\n");
       if (leaf_growth_frequency_gene.getValue() <= (this.leaf_growth_frequency_tracker / max_size_gene.getValue())) {
-        ArrayList<PVector> new_leaf = this.generateLeaf(last_point, new PVector(), leaf_width_gene.getValue(), leaf_length_gene.getValue());
+        float leaf_rotation = random(0, 2*PI);
+        ArrayList<PVector> new_leaf = this.generateLeaf(last_point, growth_direction, leaf_width_gene.getValue(), leaf_length_gene.getValue(), leaf_rotation);
         this.body.addLeafToBody(new_leaf);
         this.leaf_growth_frequency_tracker = 0;
       }
@@ -167,15 +168,17 @@ public class Plant {
     this.body.draw();
   }
   
-  private ArrayList<PVector> generateLeaf(PVector source_point, PVector growth_direction, float leaf_width, float leaf_length) {
+  private ArrayList<PVector> generateLeaf(PVector source_point, PVector growth_direction, float leaf_width, float leaf_length, float rotation_angle) {
     ArrayList<PVector> new_leaf = new ArrayList<PVector>();
     new_leaf.add(source_point);
     PVector left_base = new PVector(-leaf_width/2, .1, leaf_length/2);
     PVector right_base = new PVector(leaf_width/2, .1, leaf_length/2);
     PVector tip_base = new PVector(0, .1, leaf_length);
-    PVector left_point = source_point.copy().add(componentMultiply(left_base, growth_direction));
-    PVector right_point = source_point.copy().add(componentMultiply(right_base, growth_direction));
-    PVector tip_point = source_point.copy().add(componentMultiply(tip_base, growth_direction));
+    
+    PVector left_point = source_point.copy().add(rotateAroundAxis(left_base, growth_direction, rotation_angle));
+    PVector right_point = source_point.copy().add(rotateAroundAxis(right_base, growth_direction, rotation_angle));
+    PVector tip_point = source_point.copy().add(rotateAroundAxis(tip_base, growth_direction, rotation_angle));
+    
     new_leaf.add(left_point);
     new_leaf.add(right_point);
     new_leaf.add(tip_point);
@@ -254,7 +257,7 @@ public class PlantBody {
           PVector tip = leaf.get(3);
       
           // Draw as a simple triangle fan
-          fill(0, 255, 0, 150); // green with some transparency
+          fill(0, 255, 0, 200); // green with some transparency
           noStroke();
           beginShape();
           vertex(source.x, source.y, source.z);
@@ -263,6 +266,53 @@ public class PlantBody {
           vertex(right.x, right.y, right.z);
           endShape(CLOSE);
     }
+  }
+}
+
+
+public class PlantLeaf {
+  private ArrayList<PVector> points;
+  
+  public void setLeaf(ArrayList<PVector> new_points) {
+    this.points = new_points;
+  }
+  
+  public ArrayList<PVector> getPoints() {
+    return this.points;
+  }
+}
+
+
+//class for a branch of a plant
+public class PlantBranch {
+  private PVector growth_direction;
+  private ArrayList<PVector> points;
+  private ArrayList<PlantLeaf> leaves;
+  private ArrayList<PlantBranch> sub_branches;
+  
+  public void grow(float amount) {
+    PVector last_point = this.points.get(this.points.size() - 1);
+    last_point.add(this.growth_direction.mult(amount));
+  }
+  
+  public void addPoint(PVector point) {
+    this.points.add(point);
+  }
+  
+  public void addBranch(PlantBranch branch) {
+    this.sub_branches.add(branch);
+  }
+  
+  public void setGrowthDirection(PVector direction) {
+    this.growth_direction = direction;
+  }
+  
+  public ArrayList<PVector> getPoints() {
+    return this.points;
+  }
+  
+  public ArrayList<PlantBranch> getBranches() {
+    return this.sub_branches;
   }
 }
 
@@ -301,6 +351,8 @@ public class PlantPopulation {
       leafGenes.add(new FloatGene(random(.1, 1)));
       // leaf branch modifier (branches have more or less leaves)
       leafGenes.add(new FloatGene(random(0, 5)));
+      // leaf rotation bias
+      leafGenes.add(new FloatGene(random(0, 2 * PI)));
       
       List<Gene> branchGenes = new ArrayList<>();
       // branch amount

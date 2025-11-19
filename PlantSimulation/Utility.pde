@@ -65,3 +65,16 @@ void drawCylinder(PVector start, PVector end, float radius, int detail) {
 PVector componentMultiply(PVector a, PVector b) {
   return new PVector(a.x * b.x, a.y * b.y, a.z * b.z);
 }
+
+PVector rotateAroundAxis(PVector point, PVector axis, float angle) {
+    axis = axis.copy().normalize(); // make sure axis is unit length
+    float cosA = cos(angle);
+    float sinA = sin(angle);
+
+    // Rodrigues’ rotation formula
+    PVector term1 = point.copy().mult(cosA);
+    PVector term2 = axis.cross(point).mult(sinA);
+    PVector term3 = axis.copy().mult(axis.dot(point) * (1 - cosA));
+
+    return term1.add(term2).add(term3);
+}
