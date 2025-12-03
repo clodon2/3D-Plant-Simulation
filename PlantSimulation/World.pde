@@ -104,6 +104,10 @@ public class World {
     float yA = lerp(y1, y2, tX);
     float yB = lerp(y4, y3, tX);
     float y = lerp(yA, yB, tZ);
+    
+    print("ground");
+    print(new PVector(x0 + localX, y, z0 + localZ));
+    print("ground finish");
   
     return new PVector(x0 + localX, y, z0 + localZ);
   }
