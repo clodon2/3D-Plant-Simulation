@@ -135,9 +135,8 @@ public class Plant {
     Gene<Float> leaf_growth_frequency_gene = leaf_chromosome.getGene(2);
     Gene<Float> leaf_rotation_bias_gene = leaf_chromosome.getGene(4);
     
-    PlantBranch trunkBranch = this.body.trunkBranch;
+    PlantBranch trunkBranch = this.body.trunk_branch;
     this.recursiveUpdateTraversal(trunkBranch);
-    print(this.body.trunkBranch.getPoints());
   }
   
   private void recursiveUpdateTraversal(PlantBranch startBranch) {
@@ -159,7 +158,7 @@ public class Plant {
       // generate leaf
       if (leaf_growth_frequency_gene.getValue() <= (this.leaf_growth_frequency_tracker / max_size_gene.getValue())) {
         float leaf_rotation = random(0, 2*PI);
-        ArrayList<PVector> new_leaf_points = this.generateLeaf(startBranch.points.get(0), startBranch.getGrowthDirection(), leaf_width_gene.getValue(), leaf_length_gene.getValue(), leaf_rotation);
+        ArrayList<PVector> new_leaf_points = this.generateLeaf(startBranch.points.get(startBranch.points.size() - 1).copy(), startBranch.getGrowthDirection(), leaf_width_gene.getValue(), leaf_length_gene.getValue(), leaf_rotation);
         startBranch.addLeaf(new PlantLeaf(new_leaf_points));
         this.leaf_growth_frequency_tracker = 0;
       }
@@ -206,16 +205,16 @@ public class PlantBody {
   private PVector position = new PVector(0, 0, 0);
   private float total_size = 0.0;
   // structured where each branch stores leaves and sub branches
-  private PlantBranch trunkBranch;
+  private PlantBranch trunk_branch;
   
   PlantBody(PVector position) {
     this.position = position;
-    this.trunkBranch = new PlantBranch(position);
-    this.trunkBranch.addPoint(new PVector (position.x, position.y - 10, position.z));
+    this.trunk_branch = new PlantBranch(position);
+    this.trunk_branch.addPoint(new PVector (position.x, position.y, position.z));
   }
   
   public PlantBranch getTrunk() {
-    return this.trunkBranch;
+    return this.trunk_branch;
   }
   
   public Float getSize() {
@@ -231,7 +230,7 @@ public class PlantBody {
     fill(100, 255, 100);
     noStroke();
     
-    this.recursiveDrawTraversal(this.trunkBranch);
+    this.recursiveDrawTraversal(this.trunk_branch);
   }
   
   private void recursiveDrawTraversal(PlantBranch startBranch) {
@@ -300,12 +299,12 @@ public class PlantBranch {
     this.points = new ArrayList<PVector>();
     this.leaves = new ArrayList<PlantLeaf>();
     this.points.add(position);
-    this.growth_direction = new PVector(0, 1, 0);
+    this.growth_direction = new PVector(0, -1, 0);
   }
   
   public void grow(float amount) {
     PVector last_point = this.points.get(this.points.size() - 1);
-    last_point.add(this.growth_direction.mult(-amount));
+    last_point.add(this.growth_direction.copy().mult(amount));
   }
   
   public void addPoint(PVector point) {

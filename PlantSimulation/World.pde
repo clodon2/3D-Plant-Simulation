@@ -38,6 +38,11 @@ public class World {
   private PVector world_max_size = new PVector(100, 20, 100);
   private PVector[] world_regions;
   private PShape ground;
+  private int cols,rows;
+  private float[][] height_map;
+  private float vertex_size = 20;
+  private float noise_scale = 0.05;
+  private float height_scale = 50;
   
   // construct a world of a size
   World(PVector size) {
@@ -47,65 +52,96 @@ public class World {
   
   // create the ground within the world, unfinished
   private void generateGround() {
+    this.cols = int(this.world_max_size.x / vertex_size) + 1;
+    this.rows = int(this.world_max_size.z / vertex_size) + 1;
+    
+    this.height_map = new float[cols][rows];
+    
+    float start_x = -this.world_max_size.x / 2;
+    float start_z = -this.world_max_size.z / 2;
+    
+    // build height map to build world
+    for (int i = 0; i < this.cols; i++) {
+      for (int j = 0; j < this.rows; j++) {
+        float x = start_x + i * this.vertex_size;
+        float z = start_z + j * this.vertex_size;
+        this.height_map[i][j] = noise(x * this.noise_scale, z * this.noise_scale) * this.height_scale;
+      }
+    }
+    
     this.ground = createShape();
     this.ground.beginShape(TRIANGLES);
     this.ground.stroke(255);
     this.ground.fill(100, 255, 0);
-    float vertex_size = 20;
-    float noiseScale = 0.05;
-    float heightScale = 50;
-    for (float x=-this.world_max_size.x/2; x<this.world_max_size.x/2; x+=vertex_size) {
-      for (float z=-this.world_max_size.z/2; z<this.world_max_size.z/2; z+=vertex_size) {
-        // Compute unique heights for all four corners of the current quad
-        float y1 = noise(x * noiseScale, z * noiseScale) * heightScale;
-        float y2 = noise((x + vertex_size) * noiseScale, z * noiseScale) * heightScale;
-        float y3 = noise((x + vertex_size) * noiseScale, (z + vertex_size) * noiseScale) * heightScale;
-        float y4 = noise(x * noiseScale, (z + vertex_size) * noiseScale) * heightScale;
-  
-        // First triangle
+    
+    for (int i = 0; i < this.cols - 1; i++) {
+      for (int j = 0; j < this.rows - 1; j++) {
+    
+        float x = start_x + i * this.vertex_size;
+        float z = start_z + j * this.vertex_size;
+    
+        float y1 = this.height_map[i][j];
+        float y2 = this.height_map[i+1][j];
+        float y3 = this.height_map[i+1][j+1];
+        float y4 = this.height_map[i][j+1];
+    
+        // Triangle A
         ground.vertex(x, y1, z);
-        ground.vertex(x + vertex_size, y2, z);
-        ground.vertex(x + vertex_size, y3, z + vertex_size);
-  
-        // Second triangle
+        ground.vertex(x + this.vertex_size, y2, z);
+        ground.vertex(x + this.vertex_size, y3, z + this.vertex_size);
+    
+        // Triangle B
         ground.vertex(x, y1, z);
-        ground.vertex(x + vertex_size, y3, z + vertex_size);
-        ground.vertex(x, y4, z + vertex_size);
-      } 
-    } 
+        ground.vertex(x + this.vertex_size, y3, z + this.vertex_size);
+        ground.vertex(x, y4, z + this.vertex_size);
+      }
+    }
     this.ground.endShape();
   }
   
   PVector getRandomPointOnGround() {
-    float vertex_size = 20;
-    float noiseScale = 0.05;
-    float heightScale = 50;
+    float x = random(-this.world_max_size.x / 2, this.world_max_size.x / 2);
+    float z = random(-this.world_max_size.z / 2, this.world_max_size.z / 2);
+    float y;
+    
+    float start_x = -this.world_max_size.x / 2;
+    float start_z = -this.world_max_size.z / 2;
   
-    float halfX = world_max_size.x / 2;
-    float halfZ = world_max_size.z / 2;
+    float fx = (x - start_x) / this.vertex_size;
+    float fz = (z - start_z) / this.vertex_size;
   
-    // Pick a random cell
-    float x0 = random(-halfX, halfX - vertex_size);
-    float z0 = random(-halfZ, halfZ - vertex_size);
+    int i = floor(fx);
+    int j = floor(fz);
   
-    // Random local position inside the cell
-    float localX = random(0, vertex_size);
-    float localZ = random(0, vertex_size);
-  
-    // Heights at the four corners of the quad
-    float y1 = noise((x0) * noiseScale, (z0) * noiseScale) * heightScale;
-    float y2 = noise((x0 + vertex_size) * noiseScale, (z0) * noiseScale) * heightScale;
-    float y3 = noise((x0 + vertex_size) * noiseScale, (z0 + vertex_size) * noiseScale) * heightScale;
-    float y4 = noise((x0) * noiseScale, (z0 + vertex_size) * noiseScale) * heightScale;
-  
-    // Bilinear interpolation
-    float tX = localX / vertex_size;
-    float tZ = localZ / vertex_size;
-    float yA = lerp(y1, y2, tX);
-    float yB = lerp(y4, y3, tX);
-    float y = lerp(yA, yB, tZ);
-  
-    return new PVector(x0 + localX, y, z0 + localZ);
+    if (i < 0 || j < 0 || i >= this.cols - 1 || j >= this.rows - 1) {
+      y = 0;
+    }
+    
+    else {
+      float tX = fx - i;
+      float tZ = fz - j;
+    
+      float y1 = this.height_map[i][j];
+      float y2 = this.height_map[i+1][j];
+      float y3 = this.height_map[i+1][j+1];
+      float y4 = this.height_map[i][j+1];
+    
+      if (tX + tZ <= 1) {
+        // Triangle A: y1, y2, y3
+        y = y1 * (1 - tX - tZ)
+          + y2 * tX
+          + y3 * tZ;
+      } else {
+        // Triangle B: y1, y3, y4
+        float w1 = 1 - tX;
+        float w3 = tX + tZ - 1;
+        float w4 = 1 - tZ;
+      
+        y = w1 * y1 + w3 * y3 + w4 * y4;
+      }
+    }
+    
+    return new PVector(x, y, z);
   }
 
   
