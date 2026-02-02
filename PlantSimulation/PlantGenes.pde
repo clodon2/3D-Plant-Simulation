@@ -171,7 +171,7 @@ public class Vector3DGene implements Gene<PVector> {
   // override from interface, copy gene
   @Override
   public Gene copy() {
-    return new Vector2DGene(this.value);
+    return new Vector3DGene(this.value);
   }
   
   // get value from gene
@@ -215,7 +215,7 @@ public class Rotation3DGene implements Gene<PVector> {
   // override from interface, copy gene
   @Override
   public Gene copy() {
-    return new Vector2DGene(this.value);
+    return new Rotation3DGene(this.value);
   }
   
   // get value from gene

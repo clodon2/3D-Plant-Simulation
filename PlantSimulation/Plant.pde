@@ -98,6 +98,7 @@ public class Plant {
   private PlantBody body;
   
   private float leaf_growth_frequency_tracker = 0;
+  private float branch_growth_frequency_tracker = 0;
   
   // construct plant with a genotype
   Plant(Genotype genotype) {
@@ -149,6 +150,10 @@ public class Plant {
     Gene<Float> leaf_length_gene = leaf_chromosome.getGene(1);
     Gene<Float> leaf_growth_frequency_gene = leaf_chromosome.getGene(2);
     Gene<Float> leaf_rotation_bias_gene = leaf_chromosome.getGene(4);
+    
+    Chromosome branch_chromosome = this.genotype.getChromosome(2);
+    Gene<Float> branch_frequency_gene = branch_chromosome.getGene(0);
+    Gene<PVector> branch_rotation_gene = branch_chromosome.getGene(1);
 
     // update current branch
     if (max_size_gene.getValue() > this.body.getSize()) {
@@ -163,6 +168,14 @@ public class Plant {
         this.leaf_growth_frequency_tracker = 0;
       }
       this.leaf_growth_frequency_tracker += growth_rate_gene.getValue();
+      
+      // generate branch
+      if (branch_frequency_gene.getValue() <= (this.branch_growth_frequency_tracker / max_size_gene.getValue())) {
+        print("branch added");
+        startBranch.addBranch(this.generateBranch(startBranch.points.get(startBranch.points.size() - 1).copy(), branch_rotation_gene.getValue(), 1, 1, 1));
+        this.branch_growth_frequency_tracker = 0;
+      }
+      this.branch_growth_frequency_tracker += growth_rate_gene.getValue();
     }
     
     // check if sub branches
@@ -197,6 +210,12 @@ public class Plant {
     new_leaf.add(tip_point);
     return new_leaf;
   }
+  
+  private PlantBranch generateBranch(PVector source_point, PVector growth_direction, float branch_width, float branch_length, float rotation_angle) {
+    PlantBranch newBranch = new PlantBranch(source_point, growth_direction);
+    newBranch.addPoint(source_point.copy());
+    return newBranch;
+  }
 }
 
 
@@ -209,7 +228,7 @@ public class PlantBody {
   
   PlantBody(PVector position) {
     this.position = position;
-    this.trunk_branch = new PlantBranch(position);
+    this.trunk_branch = new PlantBranch(position, new PVector(.1, -1, .1));
     this.trunk_branch.addPoint(new PVector (position.x, position.y, position.z));
   }
   
@@ -236,6 +255,10 @@ public class PlantBody {
   private void recursiveDrawTraversal(PlantBranch startBranch) {
      // draw current branch
     for (int i = 0; i < startBranch.points.size() - 1; i++) {
+      /*
+      print(startBranch.getPoints().get(i));
+      println(startBranch.getPoints().get(i+1));
+      */
       drawCylinder(startBranch.getPoints().get(i), startBranch.getPoints().get(i+1), 1.5, 4);
     }
     // draw current leaves
@@ -302,9 +325,21 @@ public class PlantBranch {
     this.growth_direction = new PVector(0, -1, 0);
   }
   
+  PlantBranch(PVector position, PVector growth_direction) {
+    this.points = new ArrayList<PVector>();
+    this.leaves = new ArrayList<PlantLeaf>();
+    this.points.add(position);
+    this.growth_direction = growth_direction.copy();
+  }
+  
   public void grow(float amount) {
     PVector last_point = this.points.get(this.points.size() - 1);
     last_point.add(this.growth_direction.copy().mult(amount));
+    print(this.growth_direction);
+    print(" ");
+    print(last_point);
+    print(" ");
+    println(this.points);
   }
   
   public void addPoint(PVector point) {
@@ -361,7 +396,7 @@ public class PlantPopulation {
       // growth rate
       growthGenes.add(new FloatGene(random(.5, 1)));
       // max growth length
-      growthGenes.add(new FloatGene(random(10, 30)));
+      growthGenes.add(new FloatGene(random(50, 100)));
       // rotation gene (useless now)
       growthGenes.add(new Rotation3DGene(new PVector(random(0, PI), random(0, PI), random(0, PI))));
       
@@ -378,8 +413,9 @@ public class PlantPopulation {
       leafGenes.add(new FloatGene(random(0, 2 * PI)));
       
       List<Gene> branchGenes = new ArrayList<>();
-      // branch amount
-      branchGenes.add(new IntGene(int(random(0, 10))));
+      // branch frequency
+      branchGenes.add(new FloatGene(random(.1, .2)));
+      branchGenes.add(new Rotation3DGene(new PVector(random(0, PI), random(0, PI), random(0, PI))));
       
       
       // add chromosome to genotype and create new plant with genotype

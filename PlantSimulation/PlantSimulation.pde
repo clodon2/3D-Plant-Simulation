@@ -14,7 +14,7 @@ void setup() {
   size (600, 480, P3D);
   my_world = new World(new PVector(100, 10, 100));
   my_plant_simulator = new PlantPopulation(my_world);
-  my_plant_simulator.initPopulation(15, 5);
+  my_plant_simulator.initPopulation(1, 5);
   my_camera = new FlyCamera();
   my_camera.z = 170;
   my_camera.y = -55;
