@@ -157,7 +157,6 @@ public class Plant {
     
     // remove energy for sustain
     this.updateEnergy(-this.body.getSize()*.1);
-    println(this.energy);
   }
   
   private void recursiveUpdateTraversal(PlantBranch startBranch) {
