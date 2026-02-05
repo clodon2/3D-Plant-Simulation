@@ -96,9 +96,12 @@ public class Plant {
   public Genotype genotype;
   private float energy = 100;
   private PlantBody body;
+  private boolean mature = false;
   
   private float leaf_growth_frequency_tracker = 0;
   private float branch_growth_frequency_tracker = 0;
+  
+  private List<Float> leaf_heights = new ArrayList<Float>();
   
   // construct plant with a genotype
   Plant(Genotype genotype) {
@@ -122,6 +125,12 @@ public class Plant {
     this.energy += change;
   }
   
+  public boolean getMaturity() {
+    Chromosome growth_chromosome = this.genotype.getChromosome(0);
+    Gene<Float> max_size_gene = growth_chromosome.getGene(1);
+    return this.body.getSize() >= max_size_gene.getValue();
+  }
+  
   public void update() {
     Chromosome growth_chromosome = this.genotype.getChromosome(0);
     Gene<Float> max_size_gene = growth_chromosome.getGene(1);
@@ -136,8 +145,19 @@ public class Plant {
     Gene<Float> leaf_growth_frequency_gene = leaf_chromosome.getGene(2);
     Gene<Float> leaf_rotation_bias_gene = leaf_chromosome.getGene(4);
     
+    // update grwoth
     PlantBranch trunkBranch = this.body.trunk_branch;
     this.recursiveUpdateTraversal(trunkBranch);
+    
+    // generate energy with leaves
+    float leaf_area = leaf_width_gene.getValue() * leaf_length_gene.getValue();
+    for (float leaf_y: this.leaf_heights) {
+      this.updateEnergy(.05*(leaf_area)*(leaf_y/100));
+    }
+    
+    // remove energy for sustain
+    this.updateEnergy(-this.body.getSize()*.1);
+    println(this.energy);
   }
   
   private void recursiveUpdateTraversal(PlantBranch startBranch) {
@@ -162,6 +182,7 @@ public class Plant {
       
       // generate leaf
       if (leaf_growth_frequency_gene.getValue() <= (this.leaf_growth_frequency_tracker / max_size_gene.getValue())) {
+        this.leaf_heights.add(startBranch.points.get(startBranch.points.size() - 1).copy().x);
         float leaf_rotation = random(0, 2*PI);
         ArrayList<PVector> new_leaf_points = this.generateLeaf(startBranch.points.get(startBranch.points.size() - 1).copy(), startBranch.getGrowthDirection(), leaf_width_gene.getValue(), leaf_length_gene.getValue(), leaf_rotation);
         startBranch.addLeaf(new PlantLeaf(new_leaf_points));
@@ -171,7 +192,6 @@ public class Plant {
       
       // generate branch
       if (branch_frequency_gene.getValue() <= (this.branch_growth_frequency_tracker / max_size_gene.getValue())) {
-        print("branch added");
         float branch_horizontal_direction = random(TWO_PI);
         float brv_x = sin(branch_vertical_direction_gene.getValue()) * cos(branch_horizontal_direction); 
         float brv_y = cos(branch_vertical_direction_gene.getValue()); 
@@ -340,11 +360,6 @@ public class PlantBranch {
   public void grow(float amount) {
     PVector last_point = this.points.get(this.points.size() - 1);
     last_point.add(this.growth_direction.copy().mult(amount));
-    print(this.growth_direction);
-    print(" ");
-    print(last_point);
-    print(" ");
-    println(this.points);
   }
   
   public void addPoint(PVector point) {
@@ -443,7 +458,7 @@ public class PlantPopulation {
     List<Plant> new_plants = new ArrayList<>();
     List<Plant> healthy_plants = new ArrayList<>();
     for (int i=0; i<(this.plants.size() - 1); i++) {
-      if (this.plants.get(i).getEnergy() > 90) {
+      if (this.plants.get(i).getEnergy() > 90 && this.plants.get(i).getMaturity()) {
           healthy_plants.add(this.plants.get(i));
       }
     }
