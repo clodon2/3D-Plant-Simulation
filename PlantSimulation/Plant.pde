@@ -100,6 +100,7 @@ public class Plant {
   
   private float leaf_growth_frequency_tracker = 0;
   private float branch_growth_frequency_tracker = 0;
+  private float reproduction_timer = 0;
   
   private List<Float> leaf_heights = new ArrayList<Float>();
   
@@ -131,23 +132,28 @@ public class Plant {
     return this.body.getSize() >= max_size_gene.getValue();
   }
   
+  public boolean getReproductionReady() {
+    boolean reproduce_ready = world_timer.time > this.reproduction_timer;
+    return this.getMaturity() && reproduce_ready;
+  }
+  
+  public void resetReproduction() {
+    Chromosome reproduction_chromosome = this.genotype.getChromosome(3);
+    Gene<Integer> reproduce_cooldown = reproduction_chromosome.getGene(0);
+    this.reproduction_timer = world_timer.time + reproduce_cooldown.getValue();
+  }
+  
   public void update() {
     Chromosome growth_chromosome = this.genotype.getChromosome(0);
     Gene<Float> max_size_gene = growth_chromosome.getGene(1);
     Gene<Float> growth_rate_gene = growth_chromosome.getGene(0);
-    if (max_size_gene.getValue() < this.body.getSize()) {
-      return;
-    }
+    
     // leaf gene references
     Chromosome leaf_chromosome = this.genotype.getChromosome(1);
     Gene<Float> leaf_width_gene = leaf_chromosome.getGene(0);
     Gene<Float> leaf_length_gene = leaf_chromosome.getGene(1);
     Gene<Float> leaf_growth_frequency_gene = leaf_chromosome.getGene(2);
     Gene<Float> leaf_rotation_bias_gene = leaf_chromosome.getGene(4);
-    
-    // update grwoth
-    PlantBranch trunkBranch = this.body.trunk_branch;
-    this.recursiveUpdateTraversal(trunkBranch);
     
     // generate energy with leaves
     float leaf_area = leaf_width_gene.getValue() * leaf_length_gene.getValue();
@@ -156,7 +162,16 @@ public class Plant {
     }
     
     // remove energy for sustain
-    this.updateEnergy(-this.body.getSize()*.1);
+    this.updateEnergy(-this.body.getSize()*global_energy_loss);
+    
+    if (max_size_gene.getValue() < this.body.getSize()) {
+      return;
+    }
+    
+    // update grwoth
+    PlantBranch trunkBranch = this.body.trunk_branch;
+    this.recursiveUpdateTraversal(trunkBranch);
+   
   }
   
   private void recursiveUpdateTraversal(PlantBranch startBranch) {
@@ -413,7 +428,7 @@ public class PlantPopulation {
       // generate a random chromosome for growth info
       List<Gene> growthGenes = new ArrayList<>();
       // growth rate
-      growthGenes.add(new FloatGene(random(.5, 1)));
+      growthGenes.add(new FloatGene(global_base_growth * random(.5, 1)));
       // max growth length
       growthGenes.add(new FloatGene(random(50, 100)));
       // rotation gene (useless now)
@@ -436,11 +451,20 @@ public class PlantPopulation {
       branchGenes.add(new FloatGene(random(.1, .2)));
       branchGenes.add(new FloatGene(random(TWO_PI)));
       
+      List<Gene> reproductionGenes = new ArrayList<>();
+      // reproduce every day to every 4 years
+      // 4 years = 12614400
+      // 1 year = 31556952
+      // 1 day = 86400
+      // fit to guassian so most are every year
+      float repro_rate = (100000 * randomGaussian()) + (31556952/2);
+      reproductionGenes.add(new IntGene(int(repro_rate)));
       
       // add chromosome to genotype and create new plant with genotype
       newGenotype.addChromosome(new Chromosome(growthGenes));
       newGenotype.addChromosome(new Chromosome(leafGenes));
       newGenotype.addChromosome(new Chromosome(branchGenes));
+      newGenotype.addChromosome(new Chromosome(reproductionGenes));
       this.plants.add(new Plant(newGenotype, this.world.getRandomPointOnGround()));
     }
   }
@@ -456,14 +480,17 @@ public class PlantPopulation {
   public void reproducePopulation() {
     List<Plant> new_plants = new ArrayList<>();
     List<Plant> healthy_plants = new ArrayList<>();
-    for (int i=0; i<(this.plants.size() - 1); i++) {
-      if (this.plants.get(i).getEnergy() > 90 && this.plants.get(i).getMaturity()) {
+    for (int i=0; i<(this.plants.size()); i++) {
+      if (this.plants.get(i).getEnergy() > 90 && this.plants.get(i).getReproductionReady()) {
           healthy_plants.add(this.plants.get(i));
       }
     }
     for (int i=0; i<(healthy_plants.size() - 1); i++) {
+      println(i);
       Genotype newGenome = healthy_plants.get(i).genotype.reproduce(healthy_plants.get(i+1).genotype);
       new_plants.add(new Plant(newGenome, this.world.getRandomPointOnGround()));
+      healthy_plants.get(i).resetReproduction();
+      healthy_plants.get(i+1).resetReproduction();
     }
     this.plants.addAll(new_plants);
   }

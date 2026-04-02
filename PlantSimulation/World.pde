@@ -41,8 +41,8 @@ public class World {
   private int cols,rows;
   private float[][] height_map;
   private float vertex_size = 20;
-  private float noise_scale = 0.05;
-  private float height_scale = 50;
+  private float noise_scale = 0.01;
+  private float height_scale = 100;
   
   // construct a world of a size
   World(PVector size) {
@@ -157,5 +157,38 @@ public class World {
   // get the ground shape to draw
   public PShape getGround() {
     return this.ground;
+  }
+}
+
+
+public class WorldTime {
+  public float time_multiplier = 1;
+  public int year;
+  public int season;
+  public float time;
+  private int delta;
+  private int last_delta = 0;
+  
+  WorldTime() {
+    this.year = 0;
+    this.season = 0;
+    this.time = 0;
+  }
+  
+  WorldTime(float time_speed_multiplier) {
+    this.year = 0;
+    this.season = 0;
+    this.time = 0;
+    this.time_multiplier = time_speed_multiplier;
+  }
+  
+  void stepTime() {
+    this.delta = millis() - last_delta;
+    
+    this.time += this.delta * this.time_multiplier;
+    this.year = int(time / 31556952);
+    this.season = int(time / (31556952/4));
+    
+    this.last_delta = millis();
   }
 }

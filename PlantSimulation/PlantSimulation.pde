@@ -6,15 +6,21 @@ no need to import other files here, in compiling they all get thrown together au
 World my_world;
 PlantPopulation my_plant_simulator;
 FlyCamera my_camera;
-float timer;
-float update_tick = 20;
+WorldTime world_timer = new WorldTime(1000);
+float world_update_timer = 0;
+float update_tick = 1;
+float global_base_growth = .08;
+float global_energy_loss = global_base_growth * .001;
+int ui_font_size = 25;
 
 void setup() {
-  timer = 0;
+  // ui setup
+  PFont UIFont = createFont("Consolas", ui_font_size);
+  textFont(UIFont);
   size (600, 480, P3D);
-  my_world = new World(new PVector(100, 10, 100));
+  my_world = new World(new PVector(200, 10, 200));
   my_plant_simulator = new PlantPopulation(my_world);
-  my_plant_simulator.initPopulation(20, 5);
+  my_plant_simulator.initPopulation(10, 5);
   my_camera = new FlyCamera();
   my_camera.z = 170;
   my_camera.y = -55;
@@ -23,19 +29,17 @@ void setup() {
 }
 
 void draw() {
-  timer += 1;
+  world_timer.stepTime();
   background(0);
+  perspective();
   lights();
   //translate(width/2, height/2 + 100, -200);
   my_camera.update();
   my_world.draw();
-  if (timer % update_tick == 0) {
+  if ((world_update_timer + update_tick) < world_timer.time) {
+    world_update_timer = world_timer.time;
     my_plant_simulator.stepPopulation();
   }
   my_plant_simulator.draw();
-  text(my_camera.x, 50, 50);
-  text(my_camera.y, 50, 40);
-  text(my_camera.z, 50, 30);
-  text(my_camera.yaw, 50, 20);
-  text(my_camera.pitch, 50, 10);
+  drawUI();
 }
