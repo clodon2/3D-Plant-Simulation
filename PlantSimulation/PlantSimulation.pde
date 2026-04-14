@@ -11,6 +11,9 @@ float world_update_timer = 0;
 float update_tick = 1;
 float global_base_growth = .08;
 float global_energy_loss = global_base_growth * .001;
+float resource_loss_multiplier = .001;
+float resource_gain_multiplier = 1;
+float base_resource_gain = .1;
 int ui_font_size = 25;
 
 void setup() {
@@ -39,6 +42,7 @@ void draw() {
   if ((world_update_timer + update_tick) < world_timer.time) {
     world_update_timer = world_timer.time;
     my_plant_simulator.stepPopulation();
+    my_world.updateWorld();
   }
   my_plant_simulator.draw();
   drawUI();

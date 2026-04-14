@@ -40,6 +40,9 @@ public class World {
   private PShape ground;
   private int cols,rows;
   private float[][] height_map;
+  private float[][][] world_resources;
+  private int resource_types = 5;
+  private float base_resource_amount = 50;
   private float vertex_size = 20;
   private float noise_scale = 0.01;
   private float height_scale = 100;
@@ -56,6 +59,7 @@ public class World {
     this.rows = int(this.world_max_size.z / vertex_size) + 1;
     
     this.height_map = new float[cols][rows];
+    this.world_resources = new float[cols][rows][this.resource_types];
     
     float start_x = -this.world_max_size.x / 2;
     float start_z = -this.world_max_size.z / 2;
@@ -66,6 +70,9 @@ public class World {
         float x = start_x + i * this.vertex_size;
         float z = start_z + j * this.vertex_size;
         this.height_map[i][j] = noise(x * this.noise_scale, z * this.noise_scale) * this.height_scale;
+        
+        float[] newResources = {this.base_resource_amount, this.base_resource_amount, this.base_resource_amount, this.base_resource_amount, this.base_resource_amount};
+        this.world_resources[i][j] = newResources;
       }
     }
     
@@ -157,6 +164,63 @@ public class World {
   // get the ground shape to draw
   public PShape getGround() {
     return this.ground;
+  }
+  
+  public float updateResources(int world_row, int world_col, int resource_index, float change) {
+    this.world_resources[world_row][world_col][resource_index] += change;
+    return this.world_resources[world_row][world_col][resource_index];
+  }
+  
+  public float updateResources(float world_x, float world_z, int resource_index, float change) {
+    // shift x and z since world is centered at 0 0
+    world_x += (this.world_max_size.x / 2);
+    world_z += (this.world_max_size.z / 2);
+    
+    // update resources based on x/z conversion to matrix
+    int world_row = int(world_x / this.vertex_size);
+    int world_col = int(world_z / this.vertex_size);
+    this.world_resources[world_row][world_col][resource_index] += change;
+    return this.world_resources[world_row][world_col][resource_index];
+  }
+  
+  public float[] updateResources(float world_x, float world_z, float[] change_array) {
+    // shift x and z since world is centered at 0 0
+    world_x += (this.world_max_size.x / 2);
+    world_z += (this.world_max_size.z / 2);
+    
+    // update resources based on x/z conversion to matrix
+    int world_row = int(world_x / this.vertex_size);
+    int world_col = int(world_z / this.vertex_size);
+    for (int i=0; i<change_array.length; i++) {
+      this.world_resources[world_row][world_col][i] += change_array[i];
+    }
+    return this.world_resources[world_row][world_col];
+  }
+  
+  public float[] getResources(float world_x, float world_z) {
+    // shift x and z since world is centered at 0 0
+    world_x += (this.world_max_size.x / 2);
+    world_z += (this.world_max_size.z / 2);
+    
+    // return respurces based on x/z conversion to matrix
+    int world_row = int(world_x / this.vertex_size);
+    int world_col = int(world_z / this.vertex_size);
+    return this.world_resources[world_row][world_col];
+  }
+  
+  public float[] getResources(int world_row, int world_col) {
+    return this.world_resources[world_row][world_col];
+  }
+  
+  public void updateWorld() {
+    // add base additions to all resource fields
+    for (int i=0; i<this.rows; i++) {
+      for (int k=0; k<this.cols; k++) {
+        for (int r=0; r<this.world_resources[0][0].length; r++) {
+          this.world_resources[i][k][r] += base_resource_gain * resource_gain_multiplier;
+        }
+      }
+    }
   }
 }
 

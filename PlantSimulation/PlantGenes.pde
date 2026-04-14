@@ -115,6 +115,47 @@ public class FloatGene implements Gene<Float> {
 }
 
 
+// gene where value is an array of floats
+public class ArrayFloatGene implements Gene<float[]> {
+  private float[] value;
+  
+  // construct instance of float gene with value
+  public ArrayFloatGene(float[] value) {
+    this.value = value;
+  }
+  
+  // override from interface, mutate by adding or subtracting a value within 20 percent of value
+  @Override
+  public void mutate() {
+    for (int i=0; i<this.value.length; i++) {
+      this.value[i] = this.value[i] + random(this.value[i] * -.2, this.value[i] * .2);
+    }
+  }
+  
+  // override from interface, copy gene
+  @Override
+  public Gene copy() {
+    return new ArrayFloatGene(this.value);
+  }
+  
+  // get value from gene
+  @Override
+  public float[] getValue() {
+    return this.value;
+  }
+  
+  // override from class, used for printing
+  @Override
+  public String toString() {
+    String outputString = new String();
+    for (int i=0; i<this.value.length; i++) {
+      outputString += Float.toString(this.value[i]);
+    }
+    return outputString;
+  }
+}
+
+
 // gene where value is a 2d PVector
 public class Vector2DGene implements Gene<PVector> {
   private PVector value;

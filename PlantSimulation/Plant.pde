@@ -147,6 +147,8 @@ public class Plant {
     Chromosome growth_chromosome = this.genotype.getChromosome(0);
     Gene<Float> max_size_gene = growth_chromosome.getGene(1);
     Gene<Float> growth_rate_gene = growth_chromosome.getGene(0);
+    Gene<float[]> resource_use_gene = growth_chromosome.getGene(3);
+    Gene<float[]> resource_prod_gene = growth_chromosome.getGene(4);
     
     // leaf gene references
     Chromosome leaf_chromosome = this.genotype.getChromosome(1);
@@ -154,6 +156,28 @@ public class Plant {
     Gene<Float> leaf_length_gene = leaf_chromosome.getGene(1);
     Gene<Float> leaf_growth_frequency_gene = leaf_chromosome.getGene(2);
     Gene<Float> leaf_rotation_bias_gene = leaf_chromosome.getGene(4);
+    
+    
+    // update world with resource use/production
+    float[] change_array = {0, 0, 0, 0, 0};
+    arrayCopy(resource_use_gene.getValue(), change_array);
+    
+    // if no more resources, die
+    float[] needed_resources = my_world.getResources(this.body.getPositionX(), this.body.getPositionZ());
+    for (int i=0; i<change_array.length; i++) {
+      if (change_array[i] * resource_loss_multiplier > needed_resources[i]) {
+        this.energy = -100;
+        return;
+      }
+    }
+    
+    float[] gain_array = resource_prod_gene.getValue();
+    // make one array that holds net changes for efficient computation
+    for (int i=0; i<change_array.length; i++) {
+      change_array[i] *= -resource_loss_multiplier;
+      change_array[i] += gain_array[i] * resource_gain_multiplier;
+    }
+    my_world.updateResources(this.body.getPositionX(), this.body.getPositionZ(), change_array);
     
     // generate energy with leaves
     float leaf_area = leaf_width_gene.getValue() * leaf_length_gene.getValue();
@@ -273,6 +297,18 @@ public class PlantBody {
   
   public PlantBranch getTrunk() {
     return this.trunk_branch;
+  }
+  
+  public float getPositionX() {
+    return this.position.x;
+  }
+  
+  public float getPositionY() {
+    return this.position.y;
+  }
+  
+  public float getPositionZ() {
+    return this.position.z;
   }
   
   public Float getSize() {
@@ -433,6 +469,25 @@ public class PlantPopulation {
       growthGenes.add(new FloatGene(random(50, 100)));
       // rotation gene (useless now)
       growthGenes.add(new Rotation3DGene(new PVector(random(0, PI), random(0, PI), random(0, PI))));
+      // resources used for grwoth/sustain, water/necessary1/necessary2/optional/optional
+      float[] resourceUse = {random(.5, 1), random(.2, 1), random(.2, 1), random(0, 1), random(0, 1)};
+      growthGenes.add(new ArrayFloatGene(resourceUse));
+      // resources produced back into world, water/necessary1/necessary2/optional/optional
+      float[] resourceProduce = {random(0, 1), random(0, 1), random(0, 1), random(0, 1), random(0, 1)};
+      float total_used = 0;
+      float total_produced = 0;
+      for (float u : resourceUse) total_used += u;
+      for (float p : resourceProduce) total_produced += p;
+      // limit production to 80% of consumption
+      float produce_limit = total_used * .8;
+      if (total_produced > produce_limit) {
+        for (int l=0; l<resourceProduce.length; l++) {
+          resourceProduce[l] *= (produce_limit / total_produced); 
+        }
+      }
+      // add to chromosome
+      growthGenes.add(new ArrayFloatGene(resourceProduce));
+      
       
       List<Gene> leafGenes = new ArrayList<>();
       // leaf width
