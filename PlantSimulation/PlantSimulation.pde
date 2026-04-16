@@ -45,5 +45,9 @@ void draw() {
     my_world.updateWorld();
   }
   my_plant_simulator.draw();
+  
+  for (Plant p : my_plant_simulator.plants) {
+    p.updateScreenPos();
+  }
   drawUI();
 }

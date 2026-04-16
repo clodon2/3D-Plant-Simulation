@@ -104,6 +104,14 @@ public class Plant {
   
   private List<Float> leaf_heights = new ArrayList<Float>();
   
+  float lastScreenX, lastScreenY;
+  
+  public void updateScreenPos() {
+    // This MUST be called while the FlyCamera's transformations are active
+    lastScreenX = screenX(this.body.getPositionX(), this.body.getPositionY(), this.body.getPositionZ());
+    lastScreenY = screenY(this.body.getPositionX(), this.body.getPositionY(), this.body.getPositionZ());
+  }
+  
   // construct plant with a genotype
   Plant(Genotype genotype) {
     this.genotype = genotype;
@@ -124,6 +132,12 @@ public class Plant {
   // change plant's energy by some amount
   public void updateEnergy(float change) {
     this.energy += change;
+  }
+  
+  public float getMaturityLevel() {
+    Chromosome growth_chromosome = this.genotype.getChromosome(0);
+    Gene<Float> max_size_gene = growth_chromosome.getGene(1);
+    return constrain(this.body.getSize() / max_size_gene.getValue(), 0, 1);
   }
   
   public boolean getMaturity() {
@@ -579,5 +593,19 @@ public class PlantPopulation {
     for (int i=0; i<this.plants.size(); i++) {
       this.plants.get(i).draw();
     }
+  }
+  
+  public Plant getHoveredPlant() {
+    Plant closest = null;
+    float minHoverDist = 30; // Increase this if it's hard to hit small plants
+  
+    for (Plant p : plants) {
+      float d = dist(mouseX, mouseY, p.lastScreenX, p.lastScreenY);
+      if (d < minHoverDist) {
+        closest = p;
+        minHoverDist = d;
+      }
+    }
+    return closest;
   }
 }

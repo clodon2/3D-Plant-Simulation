@@ -1,6 +1,8 @@
 // be warned font size currently does nothing 
 
 void drawUI(){
+    hint(DISABLE_DEPTH_TEST);
+    noLights();
     pushMatrix();
     resetMatrix();
     rectMode(CENTER);
@@ -11,7 +13,15 @@ void drawUI(){
     fill(255);
     plantStatsList(my_plant_simulator.plants.size());
     timeStatsList(world_timer.time, world_timer.year, world_timer.season);
+    Plant hovered = my_plant_simulator.getHoveredPlant();
+    if (hovered != null) {
+        fill(255);
+        // Use standard text at the mouse position
+        text("Plant Energy: " + int(hovered.getEnergy()), mouseX + 15, mouseY);
+        text("Maturity: " + (hovered.getMaturityLevel()), mouseX + 15, mouseY - 20);
+    }
     popMatrix();
+    hint(ENABLE_DEPTH_TEST);
 }
 
 
