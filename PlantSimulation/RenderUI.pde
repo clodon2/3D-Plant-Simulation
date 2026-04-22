@@ -1,5 +1,16 @@
 // be warned font size currently does nothing 
 
+ArrayList<Button> buttons = new ArrayList<Button>();
+ArrayList<Slider> sliders = new ArrayList<Slider>();
+
+void createUI() {
+  BoolButton sun_button = new BoolButton(100, 100, 150, 50, "Toggle Sun", 10);
+  buttons.add(sun_button);
+  
+  Slider time_mult_slider = new Slider();
+  sliders.add(time_mult_slider);
+}
+
 void drawUI(){
     hint(DISABLE_DEPTH_TEST);
     noLights();
@@ -11,14 +22,22 @@ void drawUI(){
     translate(-width/2.0, -height/2.0);
     textAlign(LEFT);
     fill(255);
-    plantStatsList(my_plant_simulator.plants.size());
-    timeStatsList(world_timer.time, world_timer.year, world_timer.season);
     Plant hovered = my_plant_simulator.getHoveredPlant();
     if (hovered != null) {
         fill(255);
         // Use standard text at the mouse position
         text("Plant Energy: " + int(hovered.getEnergy()), mouseX + 15, mouseY);
         text("Maturity: " + (hovered.getMaturityLevel()), mouseX + 15, mouseY - 20);
+    }
+    
+    plantStatsList(my_plant_simulator.plants.size());
+    timeStatsList(world_timer.time, world_timer.year, world_timer.season);
+    
+    for (Button button : buttons) {
+      button.draw();
+    }
+    for (Slider slider : sliders) {
+      slider.draw();
     }
     popMatrix();
     hint(ENABLE_DEPTH_TEST);

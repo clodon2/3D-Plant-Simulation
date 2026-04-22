@@ -28,10 +28,13 @@ void setup() {
   // ui setup
   PFont UIFont = createFont("Consolas", ui_font_size);
   textFont(UIFont);
+  createUI();
+  // world setup
   size (600, 480, P3D);
   my_world = new World(new PVector(200, 10, 200));
   my_plant_simulator = new PlantPopulation(my_world);
   my_plant_simulator.initPopulation(10, 5);
+  // camera
   my_camera = new FlyCamera();
   my_camera.z = 170;
   my_camera.y = -55;
@@ -41,14 +44,14 @@ void setup() {
 
 void draw() {
   world_timer.stepTime();
-  if (simulate_sun) {
+  if (buttons.get(0).getValue()) {
     background(getSunColor(sin(map(world_timer.time % 86400, 0, 86400, 0, TWO_PI))));
   }
   else {
     background(0);
   }
   perspective();
-  if (simulate_sun) {
+  if (buttons.get(0).getValue()) {
     ambient(100, 100, 50);
     updateSun(world_timer.time);
   }
@@ -71,4 +74,16 @@ void draw() {
     p.updateScreenPos();
   }
   drawUI();
+}
+
+void mouseClicked() {
+  for (Button button: buttons) {
+    button.update();
+  }
+}
+
+void mouseDragged() {
+  for (Slider slider: sliders) {
+    slider.update();
+  }
 }
