@@ -6,15 +6,23 @@ no need to import other files here, in compiling they all get thrown together au
 World my_world;
 PlantPopulation my_plant_simulator;
 FlyCamera my_camera;
-WorldTime world_timer = new WorldTime(1000);
+WorldTime world_timer = new WorldTime(200);
+
+int max_plants = 800;
+
 float world_update_timer = 0;
 float update_tick = 1;
+
 float global_base_growth = .08;
 float global_energy_loss = global_base_growth * .001;
-float resource_loss_multiplier = .001;
-float resource_gain_multiplier = 1;
+
+float resource_loss_multiplier = .01;
+float resource_gain_multiplier = .01;
 float base_resource_gain = .1;
+
 int ui_font_size = 25;
+boolean simulate_sun = false;
+
 
 void setup() {
   // ui setup
@@ -33,17 +41,30 @@ void setup() {
 
 void draw() {
   world_timer.stepTime();
-  background(0);
+  if (simulate_sun) {
+    background(getSunColor(sin(map(world_timer.time % 86400, 0, 86400, 0, TWO_PI))));
+  }
+  else {
+    background(0);
+  }
   perspective();
-  lights();
+  if (simulate_sun) {
+    ambient(100, 100, 50);
+    updateSun(world_timer.time);
+  }
+  else {
+    lights();
+  }
+  specular(0);
   //translate(width/2, height/2 + 100, -200);
   my_camera.update();
-  my_world.draw();
-  if ((world_update_timer + update_tick) < world_timer.time) {
-    world_update_timer = world_timer.time;
+  world_update_timer += (1.0 / frameRate) * world_timer.time_multiplier;
+  while (world_update_timer >= update_tick) {
     my_plant_simulator.stepPopulation();
     my_world.updateWorld();
+    world_update_timer -= update_tick;
   }
+  my_world.draw();
   my_plant_simulator.draw();
   
   for (Plant p : my_plant_simulator.plants) {

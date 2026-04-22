@@ -43,6 +43,7 @@ public class World {
   private float[][][] world_resources;
   private int resource_types = 5;
   private float base_resource_amount = 50;
+  private float max_resources = 100;
   private float vertex_size = 20;
   private float noise_scale = 0.01;
   private float height_scale = 100;
@@ -55,18 +56,18 @@ public class World {
   
   // create the ground within the world, unfinished
   private void generateGround() {
-    this.cols = int(this.world_max_size.x / vertex_size) + 1;
-    this.rows = int(this.world_max_size.z / vertex_size) + 1;
+    this.rows = int(this.world_max_size.x / vertex_size) + 1;
+    this.cols = int(this.world_max_size.z / vertex_size) + 1;
     
-    this.height_map = new float[cols][rows];
-    this.world_resources = new float[cols][rows][this.resource_types];
+    this.height_map = new float[this.rows][this.cols];
+    this.world_resources = new float[this.rows][this.cols][this.resource_types];
     
     float start_x = -this.world_max_size.x / 2;
     float start_z = -this.world_max_size.z / 2;
     
     // build height map to build world
-    for (int i = 0; i < this.cols; i++) {
-      for (int j = 0; j < this.rows; j++) {
+    for (int i = 0; i < this.rows; i++) {
+      for (int j = 0; j < this.cols; j++) {
         float x = start_x + i * this.vertex_size;
         float z = start_z + j * this.vertex_size;
         this.height_map[i][j] = noise(x * this.noise_scale, z * this.noise_scale) * this.height_scale;
@@ -78,32 +79,43 @@ public class World {
     
     this.ground = createShape();
     this.ground.beginShape(TRIANGLES);
-    this.ground.stroke(255);
-    this.ground.fill(100, 255, 0);
+    this.ground.noStroke();
     
-    for (int i = 0; i < this.cols - 1; i++) {
-      for (int j = 0; j < this.rows - 1; j++) {
-    
-        float x = start_x + i * this.vertex_size;
-        float z = start_z + j * this.vertex_size;
-    
-        float y1 = this.height_map[i][j];
-        float y2 = this.height_map[i+1][j];
-        float y3 = this.height_map[i+1][j+1];
-        float y4 = this.height_map[i][j+1];
-    
-        // Triangle A
-        ground.vertex(x, y1, z);
-        ground.vertex(x + this.vertex_size, y2, z);
-        ground.vertex(x + this.vertex_size, y3, z + this.vertex_size);
-    
-        // Triangle B
-        ground.vertex(x, y1, z);
-        ground.vertex(x + this.vertex_size, y3, z + this.vertex_size);
-        ground.vertex(x, y4, z + this.vertex_size);
-      }
+  // We loop to (rows-1) and (cols-1) because we are looking at the "cells" between vertices
+    for (int i = 0; i < this.rows - 1; i++) {
+      for (int j = 0; j < this.cols - 1; j++) {
+              
+        // Calculate indices for the 4 corners of the current square
+        int topLeft     = i * this.cols + j;
+        int topRight    = (i + 1) * this.cols + j;
+        int bottomRight = (i + 1) * this.cols + (j + 1);
+        int bottomLeft  = i * this.cols + (j + 1);
+
+        // Triangle 1
+        addVertexFromGrid(topLeft);
+        addVertexFromGrid(topRight);
+        addVertexFromGrid(bottomRight);
+
+        // Triangle 2
+        addVertexFromGrid(topLeft);
+        addVertexFromGrid(bottomRight);
+        addVertexFromGrid(bottomLeft);
+        }
     }
-    this.ground.endShape();
+  this.ground.endShape();
+  }
+  
+  // Helper to keep the generateGround code clean
+  private void addVertexFromGrid(int index) {
+      int r = index / this.cols; // Recover row (X)
+      int c = index % this.cols; // Recover col (Z)
+      
+      float x = (-this.world_max_size.x / 2) + (r * this.vertex_size);
+      float z = (-this.world_max_size.z / 2) + (c * this.vertex_size);
+      float y = this.height_map[r][c];
+      
+      this.ground.fill(150, 75, 15);
+      this.ground.vertex(x, y, z);
   }
   
   PVector getRandomPointOnGround() {
@@ -120,7 +132,7 @@ public class World {
     int i = floor(fx);
     int j = floor(fz);
   
-    if (i < 0 || j < 0 || i >= this.cols - 1 || j >= this.rows - 1) {
+    if (i < 0 || j < 0 || i >= this.rows - 1 || j >= this.cols - 1) {
       y = 0;
     }
     
@@ -134,18 +146,13 @@ public class World {
       float y4 = this.height_map[i][j+1];
     
       if (tX + tZ <= 1) {
-        // Triangle A: y1, y2, y3
-        y = y1 * (1 - tX - tZ)
-          + y2 * tX
-          + y3 * tZ;
-      } else {
-        // Triangle B: y1, y3, y4
-        float w1 = 1 - tX;
-        float w3 = tX + tZ - 1;
-        float w4 = 1 - tZ;
-      
-        y = w1 * y1 + w3 * y3 + w4 * y4;
-      }
+          // Triangle A: y1, y2, y3
+          y = y1 * (1 - tX - tZ) + y2 * tX + y3 * tZ;
+      } 
+      else {
+          // Triangle B: y1, y3, y4
+          y = (1 - tX) * y1 + (tX + tZ - 1) * y3 + (1 - tZ) * y4;
+        }
     }
     
     return new PVector(x, y, z);
@@ -158,7 +165,10 @@ public class World {
   }
   
   public void draw() {
+    pushStyle();
+    fill(255);   // global fill shouldn't matter if vertex colors work
     shape(this.ground);
+    popStyle();
   }
   
   // get the ground shape to draw
@@ -166,8 +176,60 @@ public class World {
     return this.ground;
   }
   
+  private int calculateResourceColor(float[] resources) {
+    // 1. Normalize resources (0.0 to 1.0)
+    float r1 = resources[0] / this.max_resources; // Blue (Darkness/Moisture)
+    float r2 = resources[1] / this.max_resources; // Green (Nitrogen)
+    float r3 = resources[2] / this.max_resources; // Red (Iron)
+    float r4 = resources[3] / this.max_resources; // Yellow (Phosphorus)
+    float r5 = resources[4] / this.max_resources; // Brightness
+    
+    // 2. Use a more desaturated "Base Earth" color
+    // Reducing these values makes the starting point less "warm"
+    float red   = 70; 
+    float green = 55;
+    float blue  = 40;
+    
+    // 3. Apply Resource Tints with lower multipliers
+    // Instead of adding 100+, we add smaller amounts to keep it earthy
+    red   += (r3 * 40) + (r4 * 30); 
+    green += (r2 * 35);
+    blue  += (r1 * 50);
+    
+    // 4. Mute the Vividness (Mixing in Grey)
+    // We calculate a "grey" version of the current color and blend it back
+    float grey = (red + green + blue) / 3.0;
+    float saturation = 0.6; // 0.0 is pure grey, 1.0 is full color. Set to 0.5-0.7 for realism.
+    
+    red   = lerp(grey, red, saturation);
+    green = lerp(grey, green, saturation);
+    blue  = lerp(grey, blue, saturation);
+    
+    // 5. Natural Brightness Range
+    // We narrow the map from 0.7-1.3 (instead of 0.3-2.0) to prevent the "glow"
+    float brightness = map(r5, 0, 1, 0.8, 1.2);
+    
+    return color(
+      constrain(red * brightness, 0, 255),
+      constrain(green * brightness, 0, 255),
+      constrain(blue * brightness, 0, 255)
+    );
+  }
+  
+  public void updateColor(int world_row, int world_col) {
+    world_row = constrain(world_row, 0, this.rows - 2);
+    world_col = constrain(world_col, 0, this.cols - 2);
+    int vertex_number = (world_row * (this.cols - 1) + world_col) * 6;
+    float[] resources = getResources(world_row, world_col);
+    
+    for (int i=0; i<6; i++) {
+      this.ground.setFill(vertex_number + i, this.calculateResourceColor(resources));
+    }
+  }
+  
   public float updateResources(int world_row, int world_col, int resource_index, float change) {
-    this.world_resources[world_row][world_col][resource_index] += change;
+    float current = this.world_resources[world_row][world_col][resource_index];
+    this.world_resources[world_row][world_col][resource_index] = constrain(current + change, 0, this.max_resources);
     return this.world_resources[world_row][world_col][resource_index];
   }
   
@@ -179,7 +241,10 @@ public class World {
     // update resources based on x/z conversion to matrix
     int world_row = int(world_x / this.vertex_size);
     int world_col = int(world_z / this.vertex_size);
-    this.world_resources[world_row][world_col][resource_index] += change;
+    
+    float current = this.world_resources[world_row][world_col][resource_index];
+    this.world_resources[world_row][world_col][resource_index] = constrain(current + change, 0, this.max_resources);
+    
     return this.world_resources[world_row][world_col][resource_index];
   }
   
@@ -192,9 +257,39 @@ public class World {
     int world_row = int(world_x / this.vertex_size);
     int world_col = int(world_z / this.vertex_size);
     for (int i=0; i<change_array.length; i++) {
-      this.world_resources[world_row][world_col][i] += change_array[i];
+      float current = this.world_resources[world_row][world_col][i];
+      float change = change_array[i];
+      this.world_resources[world_row][world_col][i] = constrain(current + change, 0, this.max_resources);
     }
     return this.world_resources[world_row][world_col];
+  }
+  
+  public void updateResourcesRadius(float world_x, float world_z, float[] change_array, float radius) {
+    // shift x and z since world is centered at 0 0
+    world_x += (this.world_max_size.x / 2);
+    world_z += (this.world_max_size.z / 2);
+    
+    int min_row = max(0, int((world_x - radius) / this.vertex_size));
+    int max_row = min(this.rows - 1, int((world_x + radius) / this.vertex_size));
+    int min_col = max(0, int((world_z - radius) / this.vertex_size));
+    int max_col = min(this.cols - 1, int((world_z + radius) / this.vertex_size));
+    
+    for (int r=min_row; r<=max_row; r++) {
+      for (int c=min_col; c<=max_col; c++) {
+        float groundX = (r * this.vertex_size);
+        float groundZ = (c * this.vertex_size);
+        float distance = dist(world_x, world_z, groundX, groundZ);
+        
+        if (distance <= radius) {
+          float falloff = 1.0 - (distance / radius);
+          for (int i=0; i<change_array.length; i++) {
+            float current = this.world_resources[r][c][i];
+            float change = change_array[i] * falloff;
+            this.world_resources[r][c][i] = constrain(current + change, 0, this.max_resources);
+          }
+        }
+      }
+    }
   }
   
   public float[] getResources(float world_x, float world_z) {
@@ -217,8 +312,11 @@ public class World {
     for (int i=0; i<this.rows; i++) {
       for (int k=0; k<this.cols; k++) {
         for (int r=0; r<this.world_resources[0][0].length; r++) {
-          this.world_resources[i][k][r] += base_resource_gain * resource_gain_multiplier;
+          float current = this.world_resources[i][k][r];
+          float change = base_resource_gain * resource_gain_multiplier;
+          this.world_resources[i][k][r] = constrain(current + change, 0, this.max_resources);
         }
+        this.updateColor(i,k);
       }
     }
   }
@@ -255,4 +353,33 @@ public class WorldTime {
     
     this.last_delta = millis();
   }
+}
+
+
+public void updateSun(float worldTime) {
+  // Map time to a 0-PI cycle (Sun up to Sun down)
+  // 86400 is seconds in a day; adjust based on your time_multiplier [cite: 76, 80]
+  float dayCycle = (worldTime % 86400) / 86400.0;
+  float angle = map(dayCycle, 0, 1, 0, PI); 
+  
+  // X moves East to West, Y is the height in the sky
+  float sunX = cos(angle);
+  float sunY = sin(angle); // sin(0 to PI) is always positive (pointing down)
+  
+  // Determine color based on how high the sun is
+  int sunColor = getSunColor(sunY);
+  
+  // Apply the light: The direction vector (sunX, sunY, 0) 
+  // now points down toward the height_map [cite: 13]
+  directionalLight(red(sunColor), green(sunColor), blue(sunColor), sunX, sunY, 0);
+}
+
+
+int getSunColor(float sunY) {
+  // If sunY is near 0, it's sunrise/sunset
+  if (sunY < 0.2) {
+    return lerpColor(color(255, 100, 50), color(255, 200, 100), map(sunY, 0, 0.2, 0, 1));
+  } 
+  // High sun (Midday)
+  return color(255, 255, 240);
 }

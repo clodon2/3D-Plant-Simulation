@@ -129,9 +129,14 @@ public class Plant {
     return this.energy;
   }
   
+  public float getEnergyPercent() {
+    return this.energy / this.body.getSize();
+  }
+  
   // change plant's energy by some amount
   public void updateEnergy(float change) {
-    this.energy += change;
+    float max_energy = max(30, this.body.getSize());
+    this.energy = constrain(this.energy + change, -100, max_energy);
   }
   
   public float getMaturityLevel() {
@@ -525,8 +530,8 @@ public class PlantPopulation {
       // 4 years = 12614400
       // 1 year = 31556952
       // 1 day = 86400
-      // fit to guassian so most are every year
-      float repro_rate = (100000 * randomGaussian()) + (31556952/2);
+      // fit to guassian so most are 4 weeks, deviation of 2 weeks
+      float repro_rate = (1209600 * randomGaussian()) + (2419200);
       reproductionGenes.add(new IntGene(int(repro_rate)));
       
       // add chromosome to genotype and create new plant with genotype
@@ -547,15 +552,21 @@ public class PlantPopulation {
   
   // reproduce all plants in population based on energy
   public void reproducePopulation() {
+    // if at plant cap, dont make more
+    if (this.plants.size() > max_plants) {
+      return;
+    }
+    // need 2 lists to store new plants and plants that can reproduce
     List<Plant> new_plants = new ArrayList<>();
     List<Plant> healthy_plants = new ArrayList<>();
+    // find all plants that can reproduce (enough energy and are mature)
     for (int i=0; i<(this.plants.size()); i++) {
-      if (this.plants.get(i).getEnergy() > 90 && this.plants.get(i).getReproductionReady()) {
+      if (this.plants.get(i).getEnergyPercent() > .9 && this.plants.get(i).getReproductionReady()) {
           healthy_plants.add(this.plants.get(i));
       }
     }
+    // reproduce with crossover
     for (int i=0; i<(healthy_plants.size() - 1); i++) {
-      println(i);
       Genotype newGenome = healthy_plants.get(i).genotype.reproduce(healthy_plants.get(i+1).genotype);
       new_plants.add(new Plant(newGenome, this.world.getRandomPointOnGround()));
       healthy_plants.get(i).resetReproduction();
