@@ -73,6 +73,7 @@ void draw() {
   for (Plant p : my_plant_simulator.plants) {
     p.updateScreenPos();
   }
+  updateUI();
   drawUI();
 }
 
@@ -82,8 +83,17 @@ void mouseClicked() {
   }
 }
 
-void mouseDragged() {
+void mousePressed() {
   for (Slider slider: sliders) {
-    slider.update();
+    slider.sliding_box.clicked();
+  }
+}
+
+void mouseReleased() {
+  if (sliders.get(0).sliding_box.focused) {
+    world_timer.time_multiplier = sliders.get(0).getValue();
+  }
+  for (Slider slider: sliders) {
+    slider.sliding_box.unclicked();
   }
 }

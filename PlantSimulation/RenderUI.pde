@@ -7,7 +7,7 @@ void createUI() {
   BoolButton sun_button = new BoolButton(100, 100, 150, 50, "Toggle Sun", 10);
   buttons.add(sun_button);
   
-  Slider time_mult_slider = new Slider();
+  Slider time_mult_slider = new Slider(1, 1000, 20, 200, 200, 40, "Time Scale:");
   sliders.add(time_mult_slider);
 }
 
@@ -43,6 +43,11 @@ void drawUI(){
     hint(ENABLE_DEPTH_TEST);
 }
 
+void updateUI() {
+  for (Slider slider : sliders) {
+    slider.update();
+  }
+}
 
 void plantStatsList(int plant_number) {
   TextList statList = new TextList(float(120), float(20), float(10));

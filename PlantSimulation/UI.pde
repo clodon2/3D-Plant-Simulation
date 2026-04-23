@@ -221,29 +221,54 @@ public class BoolButton extends Button {
 
 
 class Slider {
-  int value = 1500;
-  int[] value_range = {500, 2500};
+  int value = 1;
+  int min_value = 0;
+  int max_value = 0;
   // x, y on screen
-  float[] screen_pos = {20, 200};
+  float x = 0;
+  float y = 0;
   float w = 200;
   float h = 50;
   SliderDragBox sliding_box;
   SliderBackground sliding_bg;
+  String label = "";
   
-  Slider(int[] value_range, float[] screen_pos, float w, float h) {
-    this.value_range = value_range;
-    this.screen_pos = screen_pos;
+  Slider(int min_value, int max_value, float x, float y, float w, float h) {
+    this.min_value = min_value;
+    this.max_value = max_value;
+    this.x = x;
+    this.y = y;
     this.w = w;
     this.h = h;
-    this.sliding_box = new SliderDragBox(screen_pos[0], screen_pos[1], w / 10, h, screen_pos[0], screen_pos[0] + w);
-    this.sliding_bg = new SliderBackground(screen_pos[0], screen_pos[1], w, h);
+    this.sliding_box = new SliderDragBox(this, this.x, this.y, w / 10, h, this.x, this.x + w);
+    this.sliding_bg = new SliderBackground(this, this.x, this.y, w, h);
+  }
+  
+  Slider(int min_value, int max_value, float x, float y, float w, float h, String label) {
+    this.min_value = min_value;
+    this.max_value = max_value;
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+    this.sliding_box = new SliderDragBox(this, this.x, this.y, w / 10, h, this.x, this.x + w);
+    this.sliding_bg = new SliderBackground(this, this.x, this.y, w, h);
+    this.label = label;
   }
 
-  public float getValuePercent() {
-    // median is needed because arm works where anything 500-1500 is one direction and 1500-2500 is the other
-    float median = (this.value_range[0] + this.value_range[1]) / 2;
-    float value_percent = (value - median) / (value_range[1] - median);
+  public float getValuePercentMedian() {
+    // return percentage slider is dragged to from middle (-1 to 1)
+    float median = (this.min_value + this.max_value) / 2;
+    float value_percent = (this.value - median) / (this.max_value - median);
     return value_percent;
+  }
+  
+  public float getValuePercent() {
+    return float(this.value) / this.max_value;
+  }
+  
+  public float getValue() {
+    return this.value;
   }
   
   public void update() {
@@ -253,20 +278,39 @@ class Slider {
   public void draw() {
     this.sliding_bg.drawBackground();
     this.sliding_box.drawDragBox();
+    if (str(this.value).length() <= 0 ){
+      return;
+    }
+    pushMatrix();
+    resetMatrix();
+    rectMode(CENTER);
+    textAlign(CENTER, CENTER);
+    ortho();
+    translate(-width/2.0, -height/2.0);
+    // text(str, x, y, w, h)
+    fill(100);
+    rect(this.x + this.w/2, this.y + this.h + 20, this.w, this.h);
+    fill(255);
+    String display_text = label + str(this.value);
+    text(display_text, this.x + this.w/2, this.y + this.h + 20);
+    popMatrix();
   }
 
 }
 
 
 class SliderDragBox {
+  Slider parent;
   float x = 0;
   float y = 0;
   float w = 5;
   float h = 10;
   float min_x = 0;
   float max_x = 0;
+  boolean focused = false;
   
-  public SliderDragBox(float x, float y, float w, float h, float min_x, float max_x) {
+  public SliderDragBox(Slider parent, float x, float y, float w, float h, float min_x, float max_x) {
+    this.parent = parent;
     this.x = x;
     this.y = y;
     this.w = w;
@@ -275,18 +319,24 @@ class SliderDragBox {
     this.max_x = max_x;
   }
   
-  public void update() {
-    println(this.x - this.w/2, mouseX, this.x + this.w/2);
+  public void clicked() {
     if ((this.x - this.w/2) < mouseX && mouseX < (this.x + this.w/2)) {
       if ((this.y - this.h/2) < mouseY && mouseY < (this.y + this.h/2)) {
-        this.clicked();
+        this.focused = true;
       }
     }
   }
   
-  private void clicked() {
-    println("j");
+  public void unclicked() {
+    this.focused = false;
+  }
+  
+  private void update() {
+    if (!this.focused) {
+      return;
+    }
     this.x = constrain(mouseX, this.min_x, this.max_x);
+    this.parent.value = int(map(this.x, this.min_x, this.max_x, this.parent.min_value, this.parent.max_value));
   }
   
   public void drawDragBox() {
@@ -303,12 +353,14 @@ class SliderDragBox {
 
 
 class SliderBackground {
+  Slider parent;
   float x = 0;
   float y = 0;
   float w = 0;
   float h = 0;
 
-  public SliderBackground(float x, float y, float w, float h) {
+  public SliderBackground(Slider parent, float x, float y, float w, float h) {
+    this.parent = parent;
     this.x = x;
     this.y = y;
     this.w = w;
