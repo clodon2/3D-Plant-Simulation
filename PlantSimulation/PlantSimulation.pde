@@ -6,9 +6,11 @@ no need to import other files here, in compiling they all get thrown together au
 World my_world;
 PlantPopulation my_plant_simulator;
 FlyCamera my_camera;
-WorldTime world_timer = new WorldTime(200);
+WorldTime world_timer = new WorldTime(1);
 
 int max_plants = 800;
+
+boolean auto_restart = false;
 
 float world_update_timer = 0;
 float update_tick = 1;
@@ -40,18 +42,25 @@ void setup() {
   my_camera.y = -55;
   my_camera.pitch = .36;
   my_camera.yaw = 4.7;
+  my_camera.setOrbitControls(0, 50, 0, 250, .001, -PI/3);
 }
 
 void draw() {
+  if (buttons.get(3).getValue()) {
+    if (my_plant_simulator.plants.size() == 0) {
+      restart_sim();
+    }
+  }
+  
   world_timer.stepTime();
-  if (buttons.get(0).getValue()) {
+  if (buttons.get(2).getValue()) {
     background(getSunColor(sin(map(world_timer.time % 86400, 0, 86400, 0, TWO_PI))));
   }
   else {
     background(0);
   }
   perspective();
-  if (buttons.get(0).getValue()) {
+  if (buttons.get(2).getValue()) {
     ambient(100, 100, 50);
     updateSun(world_timer.time);
   }
@@ -96,4 +105,10 @@ void mouseReleased() {
   for (Slider slider: sliders) {
     slider.sliding_box.unclicked();
   }
+}
+
+void restart_sim() {
+  my_world = new World(new PVector(200, 10, 200));
+  my_plant_simulator = new PlantPopulation(my_world);
+  my_plant_simulator.initPopulation(10, 5);
 }

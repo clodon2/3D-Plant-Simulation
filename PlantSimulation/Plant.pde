@@ -101,6 +101,7 @@ public class Plant {
   private float leaf_growth_frequency_tracker = 0;
   private float branch_growth_frequency_tracker = 0;
   private float reproduction_timer = 0;
+  public float resource_situation;
   
   private List<Float> leaf_heights = new ArrayList<Float>();
   
@@ -182,9 +183,13 @@ public class Plant {
     arrayCopy(resource_use_gene.getValue(), change_array);
     
     // if no more resources, die
-    float[] needed_resources = my_world.getResources(this.body.getPositionX(), this.body.getPositionZ());
+    float[] available_resources = my_world.getResources(this.body.getPositionX(), this.body.getPositionZ());
+    float[] needed_resources = available_resources;
+    this.resource_situation = 1000000000;
     for (int i=0; i<change_array.length; i++) {
-      if (change_array[i] * resource_loss_multiplier > needed_resources[i]) {
+      float demand = change_array[i] * resource_loss_multiplier;
+      this.resource_situation = min(needed_resources[i] - demand, this.resource_situation);
+      if (demand > needed_resources[i]) {
         this.energy = -100;
         return;
       }

@@ -79,6 +79,7 @@ public class World {
     
     this.ground = createShape();
     this.ground.beginShape(TRIANGLES);
+    hint(ENABLE_DEPTH_TEST);
     this.ground.noStroke();
     
   // We loop to (rows-1) and (cols-1) because we are looking at the "cells" between vertices
@@ -119,54 +120,49 @@ public class World {
   }
   
   PVector getRandomPointOnGround() {
+  
     float x = random(-this.world_max_size.x / 2, this.world_max_size.x / 2);
     float z = random(-this.world_max_size.z / 2, this.world_max_size.z / 2);
-    float y;
-    
+  
     float start_x = -this.world_max_size.x / 2;
     float start_z = -this.world_max_size.z / 2;
   
     float fx = (x - start_x) / this.vertex_size;
     float fz = (z - start_z) / this.vertex_size;
   
-    int i = floor(fx);
-    int j = floor(fz);
+    int i = constrain(floor(fx), 0, this.rows - 2);
+    int j = constrain(floor(fz), 0, this.cols - 2);
   
-    if (i < 0 || j < 0 || i >= this.rows - 1 || j >= this.cols - 1) {
-      y = 0;
+    float tX = fx - i;
+    float tZ = fz - j;
+  
+    float y1 = this.height_map[i][j];
+    float y2 = this.height_map[i+1][j];
+    float y3 = this.height_map[i+1][j+1];
+    float y4 = this.height_map[i][j+1];
+  
+    float y;
+  
+    if (tX + tZ <= 1) {
+      y = y1 * (1 - tX - tZ) + y2 * tX + y3 * tZ;
+    } else {
+      y = (1 - tX) * y1 + (tX + tZ - 1) * y3 + (1 - tZ) * y4;
     }
-    
-    else {
-      float tX = fx - i;
-      float tZ = fz - j;
-    
-      float y1 = this.height_map[i][j];
-      float y2 = this.height_map[i+1][j];
-      float y3 = this.height_map[i+1][j+1];
-      float y4 = this.height_map[i][j+1];
-    
-      if (tX + tZ <= 1) {
-          // Triangle A: y1, y2, y3
-          y = y1 * (1 - tX - tZ) + y2 * tX + y3 * tZ;
-      } 
-      else {
-          // Triangle B: y1, y3, y4
-          y = (1 - tX) * y1 + (tX + tZ - 1) * y3 + (1 - tZ) * y4;
-        }
-    }
-    
+  
     return new PVector(x, y, z);
   }
 
   
   // generate the whole world, unfinished
   public void generateWorld() {
+    noiseSeed((int)random(100000));
     generateGround();
   }
   
   public void draw() {
     pushStyle();
     fill(255);   // global fill shouldn't matter if vertex colors work
+    
     shape(this.ground);
     popStyle();
   }
@@ -177,42 +173,55 @@ public class World {
   }
   
   private int calculateResourceColor(float[] resources) {
-    // 1. Normalize resources (0.0 to 1.0)
-    float r1 = resources[0] / this.max_resources; // Blue (Darkness/Moisture)
-    float r2 = resources[1] / this.max_resources; // Green (Nitrogen)
-    float r3 = resources[2] / this.max_resources; // Red (Iron)
-    float r4 = resources[3] / this.max_resources; // Yellow (Phosphorus)
-    float r5 = resources[4] / this.max_resources; // Brightness
-    
-    // 2. Use a more desaturated "Base Earth" color
-    // Reducing these values makes the starting point less "warm"
-    float red   = 70; 
-    float green = 55;
-    float blue  = 40;
-    
-    // 3. Apply Resource Tints with lower multipliers
-    // Instead of adding 100+, we add smaller amounts to keep it earthy
-    red   += (r3 * 40) + (r4 * 30); 
-    green += (r2 * 35);
-    blue  += (r1 * 50);
-    
-    // 4. Mute the Vividness (Mixing in Grey)
-    // We calculate a "grey" version of the current color and blend it back
+    float r1 = resources[0] / this.max_resources; // moisture
+    float r2 = resources[1] / this.max_resources; // nitrogen
+    float r3 = resources[2] / this.max_resources; // iron
+    float r4 = resources[3] / this.max_resources; // phosphorus
+    float r5 = resources[4] / this.max_resources; // brightness
+  
+    // overall resource richness
+    float total = (r1 + r2 + r3 + r4) / 4.0;
+  
+    // base brown
+    float red   = 95;
+    float green = 75;
+    float blue  = 50;
+  
+    // subtle color influence (still brown-biased)
+    red   += (r3 * 35) + (r4 * 20);
+    green += (r2 * 25);
+    blue  += (r1 * 15);
+  
+    // back toward brown
+    float avg = (red + green + blue) / 3.0;
+    float brownBias = 0.5;
+  
+    red   = lerp(avg + 10, red, brownBias);
+    green = lerp(avg,      green, brownBias);
+    blue  = lerp(avg - 10, blue, brownBias);
+  
+    // desaturate 
     float grey = (red + green + blue) / 3.0;
-    float saturation = 0.6; // 0.0 is pure grey, 1.0 is full color. Set to 0.5-0.7 for realism.
-    
+    float saturation = 0.5;
+  
     red   = lerp(grey, red, saturation);
     green = lerp(grey, green, saturation);
     blue  = lerp(grey, blue, saturation);
-    
-    // 5. Natural Brightness Range
-    // We narrow the map from 0.7-1.3 (instead of 0.3-2.0) to prevent the "glow"
-    float brightness = map(r5, 0, 1, 0.8, 1.2);
-    
+  
+    // Low resources much darker
+    // High resources near normal
+    float richnessBrightness = pow(total, 1.5); // exaggerates low-resource darkness
+    richnessBrightness = lerp(0.3, 1.1, richnessBrightness);
+  
+    // normal brightness
+    float brightness = map(r5, 0, 1, 0.9, 1.1);
+  
+    float finalScale = richnessBrightness * brightness;
+  
     return color(
-      constrain(red * brightness, 0, 255),
-      constrain(green * brightness, 0, 255),
-      constrain(blue * brightness, 0, 255)
+      constrain(red * finalScale, 0, 255),
+      constrain(green * finalScale, 0, 255),
+      constrain(blue * finalScale, 0, 255)
     );
   }
   
@@ -223,6 +232,7 @@ public class World {
     float[] resources = getResources(world_row, world_col);
     
     for (int i=0; i<6; i++) {
+      
       this.ground.setFill(vertex_number + i, this.calculateResourceColor(resources));
     }
   }

@@ -211,6 +211,57 @@ public class BoolButton extends Button {
     ortho();
     translate(-width/2.0, -height/2.0);
     // text(str, x, y, w, h)
+    if (this.value) {
+      fill(color(50, 200, 50));
+    }
+    else {
+      fill(color(255, 0, 0));
+    }
+    rect(this.x, this.y, this.w, this.h);
+    fill(255);
+    textSize(this.font_size);
+    text(this.text, this.x, this.y, this.w, this.h);
+    popMatrix();
+  }
+}
+
+
+public class ClassFunctionButton extends Button {
+   ButtonController controller;
+  
+  ClassFunctionButton(float x, float y, float w, float h, String text, ButtonController controller) {
+    super(x, y, w, h, text);
+    this.controller = controller;
+  }
+  
+  ClassFunctionButton(float x, float y, float w, float h, String text, int font_size, ButtonController controller) {
+    super(x, y, w, h, text, font_size);
+    this.controller = controller;
+  }
+  
+  ClassFunctionButton(float x, float y, float w, float h, String text, String label, int label_side, ButtonController controller) {
+    super(x, y, w, h, text, label, label_side);
+    this.controller = controller;
+  }
+
+  void clicked() {
+    this.controller.execute();
+  }
+  
+  void draw() {
+    if (this.text.length() == 1){
+      this.w += 2;
+    }
+    if (this.text.length() <= 0 ){
+      return;
+    }
+    pushMatrix();
+    resetMatrix();
+    rectMode(CENTER);
+    textAlign(CENTER, CENTER);
+    ortho();
+    translate(-width/2.0, -height/2.0);
+    // text(str, x, y, w, h)
     fill(100);
     rect(this.x, this.y, this.w, this.h);
     fill(255);

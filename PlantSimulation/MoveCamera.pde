@@ -8,6 +8,16 @@ class FlyCamera {
   float yaw, pitch;
   float moveSpeed = 3;
   float lookSpeed = 0.03;  // arrow key sensitivity
+  
+  // orbit at a point if in mode
+  boolean orbitMode = false;
+
+  float targetX = 0;
+  float targetY = 0;
+  float targetZ = 0;
+  float distance = 300;
+  float orbitSpeed = 0.01;
+  float orbitPitch = -PI / 6;
 
   FlyCamera() {
     x = 0;
@@ -16,11 +26,27 @@ class FlyCamera {
     yaw = 0;
     pitch = 0;
   }
+  
+  void setOrbitControls(float targetX, float targetY, float targetZ, float distance, float orbitSpeed, float orbitPitch) {
+    this.targetX = targetX;
+    this.targetY = targetY;
+    this.targetZ = targetZ;
+    this.distance = distance;
+    this.orbitSpeed = orbitSpeed;
+  }
 
   void update() {
     handleLook();
-    handleMove();
-    applyCamera();
+    if (orbitMode) {
+      this.yaw += this.orbitSpeed;
+      if (yaw > TWO_PI) yaw -= TWO_PI;
+      if (yaw < 0) yaw += TWO_PI;
+      pitch = this.orbitPitch;
+      applyOrbitCamera();
+    } else {
+      handleMove();
+      applyCamera();
+    }
   }
 
   void handleLook() {
@@ -34,6 +60,14 @@ class FlyCamera {
 
     // Keep pitch within -90° to +90°
     pitch = constrain(pitch, -PI/2, PI/2);
+  }
+  
+  void applyOrbitCamera() {
+    x = targetX + cos(yaw) * cos(pitch) * distance;
+    y = targetY + sin(pitch) * distance;
+    z = targetZ + sin(yaw) * cos(pitch) * distance;
+  
+    camera(x, y, z, targetX, targetY, targetZ, 0, 1, 0);
   }
 
   void handleMove() {

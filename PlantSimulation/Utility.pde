@@ -83,3 +83,11 @@ PVector rotateAroundAxis(PVector point, PVector axis, float angle) {
 
     return term1.add(term2).add(term3);
 }
+
+int sum(float[] sum_array) {
+  float my_sum = 0;
+  for (int i=0; i<sum_array.length; i++) {
+    my_sum += sum_array[i];
+  }
+  return int(my_sum);
+}
