@@ -2,21 +2,21 @@
 
 3D plants simulated with a genetic algorithm, written in Processing.
 
-<img width="455" height="300" alt="image" src="https://github.com/user-attachments/assets/5e2bc3b3-e59f-41f8-9831-09ddaf766e1b" />
+<img width="1919" height="1050" alt="image" src="https://github.com/user-attachments/assets/d464376e-bb1d-4475-9e05-098f10fb074a" />
+
+<img width="674" height="864" alt="image" src="https://github.com/user-attachments/assets/0837fbf6-3504-4702-a9dd-60a7b8659f5a" />
 
 # Features
 * Unique Plant Traits
-* Random Terrain
-* Plant Growth
+* Plant Growth & Energy Production
 * Branching, Leaves
+* Crossover Reproduction
+* 5 Unique Ground Resources
+* Random Terrain
+* Simulation UI and Plant Info Hover Tooltips
 
 # In Development 
 * View Plants By Performance
-* Reproduction
-* Photosynthesis and Energy Production
 * Roots and More Complex Plants
 * Simulate by Generation or Continuous
 * Configurable Environment Conditions
-
-# Organization
-Heavy object oriented programming is utlizied to allow for many genes and unique plant parts. Simulation is ran separately from the visual to allow for quick time passage. 
